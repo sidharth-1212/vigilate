@@ -1,0 +1,17 @@
+# Environments
+venv/
+node_modules/
+
+# Secrets
+.env
+*.pem
+
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+media/
+staticfiles/
+
+# OS/Mac
+.DS_Store
