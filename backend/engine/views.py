@@ -162,7 +162,6 @@ def create_checkout(request):
    
 @csrf_exempt 
 def dodo_webhook(request):
-    # Pure Django requires us to check the method manually
     if request.method != "POST":
         return JsonResponse({"error": "Method Not Allowed"}, status=405)
 
@@ -170,35 +169,51 @@ def dodo_webhook(request):
     
     try:
         env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
+        
+        # 1. Pass the webhook_key directly into the client, just like the docs!
         client = DodoPayments(
             bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
-            environment=env_mode
+            environment=env_mode,
+            webhook_key=webhook_secret 
         )
         
-        # Because we bypassed DRF, request.body is the pristine, untouched original byte stream
-        event = client.webhooks.verify(
-            payload=request.body.decode('utf-8'),
-            headers=dict(request.headers),
-            secret=webhook_secret
+        # 2. Explicitly map the headers to prevent Django from mangling the keys
+        dodo_headers = {
+            "webhook-id": request.headers.get("webhook-id", ""),
+            "webhook-signature": request.headers.get("webhook-signature", ""),
+            "webhook-timestamp": request.headers.get("webhook-timestamp", ""),
+        }
+
+        # 3. Unwrap using only the pristine body bytes and mapped headers
+        client.webhooks.unwrap(
+            request.body,
+            headers=dodo_headers
         )
+        
     except Exception as e:
         print(f"🚨 Security Alert: Webhook verification failed! {e}")
-        return JsonResponse({"error": "Invalid signature"}, status=400)
+        return JsonResponse({"error": f"Verification failed: {str(e)}"}, status=400)
 
-    event_type = event.get("type")
-    payload_data = event.get("data", {}) 
+    # If unwrap succeeds, safely read the JSON
+    try:
+        payload = json.loads(request.body)
+        event_type = payload.get("type")
+        payload_data = payload.get("data", {}) 
 
-    if event_type in ["payment.succeeded", "subscription.active"]:
-        user_id = payload_data.get("metadata", {}).get("user_id")
-        
-        if user_id:
-            try:
+        if event_type in ["payment.succeeded", "subscription.active"]:
+            user_id = payload_data.get("metadata", {}).get("user_id")
+            
+            if user_id:
                 profile = UserProfile.objects.get(user__id=user_id)
                 profile.is_pro = True
                 profile.save()
                 print(f"💰 SUCCESS: User {user_id} securely upgraded to PRO!")
                 return JsonResponse({"status": "success"}, status=200)
-            except UserProfile.DoesNotExist:
-                return JsonResponse({"error": "User not found"}, status=404)
 
-    return JsonResponse({"status": "ignored"}, status=200)
+        return JsonResponse({"status": "ignored"}, status=200)
+        
+    except UserProfile.DoesNotExist:
+        return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        print(f"🚨 Webhook Processing Error: {e}")
+        return JsonResponse({"error": "Server error"}, status=500)
