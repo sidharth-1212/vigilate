@@ -12,6 +12,7 @@ from dodopayments import DodoPayments
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.utils import timezone
+from django.http import JsonResponse
 
 load_dotenv()
 
@@ -158,15 +159,15 @@ def create_checkout(request):
         return Response({"checkout_url": session.checkout_url})
     except Exception as e:
         return Response({"error": "Failed to create checkout"}, status=500)
-    
+   
 @csrf_exempt 
-@api_view(['POST'])
-@authentication_classes([]) 
-@permission_classes([])
 def dodo_webhook(request):
+    # Pure Django requires us to check the method manually
+    if request.method != "POST":
+        return JsonResponse({"error": "Method Not Allowed"}, status=405)
+
     webhook_secret = os.getenv('DODO_WEBHOOK_SECRET')
     
-    # 1. Cryptographically verify the request genuinely came from Dodo
     try:
         env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
         client = DodoPayments(
@@ -174,21 +175,17 @@ def dodo_webhook(request):
             environment=env_mode
         )
         
-        # The Dodo SDK checks the headers against the raw payload and your secret
+        # Because we bypassed DRF, request.body is the pristine, untouched original byte stream
         event = client.webhooks.verify(
             payload=request.body.decode('utf-8'),
             headers=dict(request.headers),
             secret=webhook_secret
         )
     except Exception as e:
-        # If the signature is fake or missing, instantly reject it
         print(f"🚨 Security Alert: Webhook verification failed! {e}")
-        return Response({"error": "Invalid signature"}, status=400)
+        return JsonResponse({"error": "Invalid signature"}, status=400)
 
-    # 2. If we reach here, the webhook is 100% authentic. Process the event.
     event_type = event.get("type")
-    
-    # Dodo events usually nest the actual data inside a 'data' object
     payload_data = event.get("data", {}) 
 
     if event_type in ["payment.succeeded", "subscription.active"]:
@@ -200,8 +197,8 @@ def dodo_webhook(request):
                 profile.is_pro = True
                 profile.save()
                 print(f"💰 SUCCESS: User {user_id} securely upgraded to PRO!")
-                return Response({"status": "success"}, status=200)
+                return JsonResponse({"status": "success"}, status=200)
             except UserProfile.DoesNotExist:
-                return Response({"error": "User not found"}, status=404)
+                return JsonResponse({"error": "User not found"}, status=404)
 
-    return Response({"status": "ignored"}, status=200)
+    return JsonResponse({"status": "ignored"}, status=200)
