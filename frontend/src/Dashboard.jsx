@@ -3,6 +3,7 @@ import {
   UploadCloud, AlertTriangle, FileText, Loader2, LogOut, Shield, CheckCircle 
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 
 export default function Dashboard() {
   const [file, setFile] = useState(null);
@@ -157,9 +158,10 @@ export default function Dashboard() {
             <h2 className="text-xl font-bold flex items-center mb-4 border-b border-gray-700 pb-4">
               <FileText className="mr-2 text-green-400" /> AI Analysis Result
             </h2>
-            <pre className="whitespace-pre-wrap font-sans text-gray-300 leading-relaxed">
-              {result}
-            </pre>
+            {/* The 'prose' class magically styles the Markdown! */}
+            <div className="prose prose-invert prose-blue max-w-none">
+                <ReactMarkdown>{result}</ReactMarkdown>
+            </div>
           </div>
         )}
       </div>
