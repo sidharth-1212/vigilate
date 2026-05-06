@@ -147,7 +147,7 @@ def create_checkout(request):
 
     try:
         session = client.checkout_sessions.create(
-            product_cart=[{"product_id": "pdt_0NeCKcV9gh3bqGULtWNk5", "quantity": 1}], # Ensure this is your LIVE ID
+            product_cart=[{"product_id": "pdt_0NeCR8svhzyOinZWE5NZf", "quantity": 1}], # Ensure this is your LIVE ID
             customer={
                 "email": request.user.email, 
                 "name": request.user.get_full_name() or request.user.username
@@ -159,25 +159,47 @@ def create_checkout(request):
     except Exception as e:
         return Response({"error": "Failed to create checkout"}, status=500)
     
-@csrf_exempt # Dodo doesn't have our CSRF token, so we exempt this specific view
+@csrf_exempt 
 @api_view(['POST'])
-@authentication_classes([]) # No Token needed; Dodo calls this, not the user
+@authentication_classes([]) 
 @permission_classes([])
 def dodo_webhook(request):
-    payload = request.data
-    event_type = payload.get("type")
+    webhook_secret = os.getenv('DODO_WEBHOOK_SECRET')
+    
+    # 1. Cryptographically verify the request genuinely came from Dodo
+    try:
+        env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
+        client = DodoPayments(
+            bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
+            environment=env_mode
+        )
+        
+        # The Dodo SDK checks the headers against the raw payload and your secret
+        event = client.webhooks.verify(
+            payload=request.body,
+            headers=dict(request.headers),
+            secret=webhook_secret
+        )
+    except Exception as e:
+        # If the signature is fake or missing, instantly reject it
+        print(f"🚨 Security Alert: Webhook verification failed! {e}")
+        return Response({"error": "Invalid signature"}, status=400)
 
-    # When a subscription or payment is successful
-    if event_type == "subscription.created" or event_type == "order.created":
-        # Pull that user_id we tucked into the metadata earlier!
-        user_id = payload.get("metadata", {}).get("user_id")
+    # 2. If we reach here, the webhook is 100% authentic. Process the event.
+    event_type = event.get("type")
+    
+    # Dodo events usually nest the actual data inside a 'data' object
+    payload_data = event.get("data", {}) 
+
+    if event_type in ["subscription.created", "order.created"]:
+        user_id = payload_data.get("metadata", {}).get("user_id")
         
         if user_id:
             try:
                 profile = UserProfile.objects.get(user__id=user_id)
                 profile.is_pro = True
                 profile.save()
-                print(f"💰 SUCCESS: User {user_id} upgraded to PRO!")
+                print(f"💰 SUCCESS: User {user_id} securely upgraded to PRO!")
                 return Response({"status": "success"}, status=200)
             except UserProfile.DoesNotExist:
                 return Response({"error": "User not found"}, status=404)
