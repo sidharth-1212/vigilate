@@ -69,32 +69,32 @@ def summarize_contract(request):
         document_text = document_text[:50000] 
 
         # 3. The Upgraded, Strict Prompt
-        system_prompt = """You are an elite corporate attorney specializing in contract review for freelancers. 
-                        Your goal is to protect the freelancer from predatory clauses and explain the contract in plain, highly concise English."""
+        # Flush these strings all the way to the left margin!
+        system_prompt = """You are an elite corporate attorney and legal analyst. Your goal is to review legal documents, contracts, bylaws, and terms of service. You must protect the user from predatory clauses and explain the document in plain, highly detailed English. Do not skip sections."""
 
-        user_prompt = f"""Analyze the following contract. You MUST cite the exact page number for every point using the [PAGE X] markers.
+        user_prompt = f"""Analyze the following legal document. You MUST cite the exact page number for every point using the [PAGE X] markers. 
+If this is not a standard contract (e.g., bylaws, NDA, terms of use), adapt your analysis to summarize the rules, rights, and risks for the relevant parties. Be extremely comprehensive and detailed.
 
-                        Format your response exactly using Markdown with these headings:
+Format your response exactly using Markdown with these headings:
 
-                        ### 📄 Executive Summary
-                        (A brief overview of the contract and parties involved).
+### 📄 Executive Summary
+(A comprehensive overview of the document, its purpose, and the parties involved).
 
-                        ### 🎯 Fulfillments
-                        * **[Criteria]** (Page X): What exactly constitutes successful completion of this contract?
+### 🎯 Core Terms & Fulfillments
+* **[Term]** (Page X): What are the main conditions, rules, or criteria outlined in this document?
 
-                        ### 💰 Benefits 
-                        * **[Benefit]** (Page X): What does the freelancer gain? (e.g., compensation, IP rights, perks).
+### 💰 Benefits & Rights
+* **[Benefit/Right]** (Page X): What rights, compensation, or protections are granted?
 
-                        ### ⚖️ Responsibilities
-                        * **[Duty]** (Page X): What are the specific obligations of the freelancer?
+### ⚖️ Responsibilities & Restrictions
+* **[Duty]** (Page X): What specific rules, obligations, or restrictions are imposed?
 
-                        ### 🚩 Red Flags & Risks
-                        * **[Risk]** (Page X): What clauses are predatory, dangerous, or highly unusual?
+### 🚩 Red Flags & Risks
+* **[Risk]** (Page X): What clauses are predatory, dangerous, highly unusual, or severely limit liability?
 
-                        ---
-                        CONTRACT TEXT:
-                        {document_text}
-                        """
+---
+DOCUMENT TEXT:
+{document_text}"""
 
         response = client.chat.completions.create(
             model="Meta-Llama-3.3-70B-Instruct",
