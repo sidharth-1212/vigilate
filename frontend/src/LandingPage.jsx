@@ -39,7 +39,7 @@ export default function LandingPage() {
           SambaNova Llama 3.3 Powered
         </div>
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight">
-          Stop signing <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">blind.</span>
+          Stop signing <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-cyan-300">blind.</span>
         </h1>
         <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
           Upload any freelance contract, NDA, or terms of service. Our AI acts as your personal legal team, instantly extracting hidden red flags and plain-English summaries so you can sign with confidence.

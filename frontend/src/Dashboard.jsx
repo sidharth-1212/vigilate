@@ -138,15 +138,15 @@ export default function Dashboard() {
         {/* Error State */}
         {error && (
           <div className="mt-6 bg-red-900/50 border border-red-500 text-red-200 p-4 rounded-lg flex items-center shadow-lg">
-            <AlertTriangle className="mr-3 text-red-400 flex-shrink-0" />
+            <AlertTriangle className="mr-3 text-red-400 shrink-0" />
             {error}
           </div>
         )}
 
         {/* Paywall State */}
         {showPaywall && (
-          <div className="mt-8 bg-gradient-to-b from-blue-900/40 to-gray-900 border border-blue-500/30 p-8 rounded-xl text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-cyan-300"></div>
+          <div className="mt-8 bg-linear-to-b from-blue-900/40 to-gray-900 border border-blue-500/30 p-8 rounded-xl text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-blue-400 to-cyan-300"></div>
             <Shield className="mx-auto h-12 w-12 text-blue-400 mb-4" />
             <h2 className="text-2xl font-bold mb-2">Daily Limit Reached!</h2>
             <p className="text-gray-400 mb-6">You've used your 10 free scans for today. Upgrade to Pro to unlock a $19 premium AI token allowance and analyze massive legal documents without restrictions.</p>
