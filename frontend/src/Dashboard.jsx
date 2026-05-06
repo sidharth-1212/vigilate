@@ -63,9 +63,16 @@ export default function Dashboard() {
       if (response.ok) {
         setResult(data.analysis);
       } else {
-        if (data.error === "PAYWALL_REACHED") {
-            setShowPaywall(true); // <-- Trigger the paywall UI
-        } else {
+        // Trigger the upgrade UI for free users
+        if (data.error === "DAILY_LIMIT_REACHED") {
+            setShowPaywall(true); 
+        } 
+        // Show a standard error if a Pro user hits their $19 token limit
+        else if (data.error === "QUOTA_EXCEEDED") {
+            setError("You have reached your maximum API spend quota of $19.");
+        } 
+        // Catch all other errors
+        else {
             setError(data.error || data.detail || JSON.stringify(data) || "Something went wrong parsing the document.");
         }
       }
@@ -84,7 +91,7 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="text-xl font-bold flex items-center gap-2">
             <Shield className="text-blue-500 w-6 h-6" />
-            ClearContract AI
+            Vigilate
           </div>
           <button 
             onClick={handleLogout}
@@ -141,13 +148,13 @@ export default function Dashboard() {
           <div className="mt-8 bg-gradient-to-b from-blue-900/40 to-gray-900 border border-blue-500/30 p-8 rounded-xl text-center shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-cyan-300"></div>
             <Shield className="mx-auto h-12 w-12 text-blue-400 mb-4" />
-            <h2 className="text-2xl font-bold mb-2">You've hit your free limit!</h2>
-            <p className="text-gray-400 mb-6">Upgrade to Pro to get unlimited contract scans, instant red-flag extraction, and peace of mind.</p>
+            <h2 className="text-2xl font-bold mb-2">Daily Limit Reached!</h2>
+            <p className="text-gray-400 mb-6">You've used your 10 free scans for today. Upgrade to Pro to unlock a $19 premium AI token allowance and analyze massive legal documents without restrictions.</p>
             <button 
               onClick={handleUpgrade}
               className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105"
             >
-              Upgrade to Pro - $19/mo
+              Upgrade to Pro - $19
             </button>
           </div>
         )}
