@@ -120,6 +120,8 @@ DOCUMENT TEXT:
         else:
             profile.daily_scans += 1
 
+        profile.save()
+
         return Response({
             "success": True, 
             "analysis": response.choices[0].message.content,
