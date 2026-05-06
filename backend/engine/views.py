@@ -11,6 +11,7 @@ import requests
 from dodopayments import DodoPayments
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.utils import timezone
 
 load_dotenv()
 
@@ -33,12 +34,23 @@ def summarize_contract(request):
 
     profile, created = UserProfile.objects.get_or_create(user=request.user)
 
+
+    today = timezone.now().date()
+    if profile.last_scan_date < today:
+        profile.daily_scans = 0
+        profile.last_scan_date = today
     # 1. Check the Dollar Value Paywall
-    if profile.api_spend >= MAX_ALLOWANCE:
-        return Response({
-            "error": "QUOTA_EXCEEDED", 
-            "message": "You have reached your $19 usage limit."
-        }, status=403) 
+
+    if not profile.is_pro:
+        if profile.daily_scans >= 10:
+            return Response({
+                "error": "DAILY_LIMIT_REACHED", 
+                "message": "You have used your 10 free scans for today. Upgrade to Pro for unlimited access!"
+            }, status=403)
+    else:
+        # Pro users are limited by their $19 API spend quota
+        if profile.api_spend >= MAX_ALLOWANCE:
+            return Response({"error": "QUOTA_EXCEEDED", "message": "Usage limit reached."}, status=403)
 
     pdf_file = request.FILES['file']
     
@@ -60,21 +72,24 @@ def summarize_contract(request):
         system_prompt = """You are an elite corporate attorney specializing in contract review for freelancers. 
                         Your goal is to protect the freelancer from predatory clauses and explain the contract in plain, highly concise English."""
 
-        user_prompt = f"""Analyze the following contract and extract the critical information.
-                        You MUST cite the exact page number for every point you make using the [PAGE X] markers provided in the text.
+        user_prompt = f"""Analyze the following contract. You MUST cite the exact page number for every point using the [PAGE X] markers.
 
-                        Format your response exactly like this:
+                        Format your response exactly using Markdown with these headings:
 
                         ### 📄 Executive Summary
-                        (A brief 2-3 sentence overview of what this contract is and who it is between).
+                        (A brief overview of the contract and parties involved).
+
+                        ### 🎯 Fulfillments
+                        * **[Criteria]** (Page X): What exactly constitutes successful completion of this contract?
+
+                        ### 💰 Benefits 
+                        * **[Benefit]** (Page X): What does the freelancer gain? (e.g., compensation, IP rights, perks).
+
+                        ### ⚖️ Responsibilities
+                        * **[Duty]** (Page X): What are the specific obligations of the freelancer?
 
                         ### 🚩 Red Flags & Risks
-                        * **[Risk Name]** (Page X): Concise explanation of why this is dangerous for the freelancer.
-                        * **[Risk Name]** (Page X): ...
-
-                        ### ✅ Key Obligations & Deliverables
-                        * **[Obligation]** (Page X): What the freelancer must do.
-                        * **[Payment Terms]** (Page X): How and when they get paid.
+                        * **[Risk]** (Page X): What clauses are predatory, dangerous, or highly unusual?
 
                         ---
                         CONTRACT TEXT:
@@ -100,8 +115,10 @@ def summarize_contract(request):
         total_cost = cost_input + cost_output
         
         # 5. Update the user's spending profile
-        profile.api_spend += total_cost
-        profile.save()
+        if profile.is_pro:
+            profile.api_spend += total_cost
+        else:
+            profile.daily_scans += 1
 
         return Response({
             "success": True, 
