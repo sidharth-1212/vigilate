@@ -10,7 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import dj_database_url
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +25,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-pvsqd5p6t&-&@#vdphrrhox^zq^)175_^sy$63bc!abub9v*f1'
-
+SECRET_KEY = os.getenv(
+    'SECRET_KEY', 
+    'ip^716ng1$b!=bwh2h8p3(y&58!1)$b6lacvcmmax(r^)0=s!('
+)
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+if not DEBUG and 'ip^716ng1$b' in SECRET_KEY:
+    raise ValueError(
+        "CRITICAL: The default local SECRET_KEY is being used in production. "
+        "Set a unique DJANGO_SECRET_KEY in your production environment variables."
+    )
+
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -49,7 +62,6 @@ INSTALLED_APPS = [
     'allauth.account',           
     'allauth.socialaccount',    
 
-    'core',
     'engine',
 ]
 
@@ -65,8 +77,6 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
 ]
 
-ROOT_URLCONF = 'config.urls'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -74,6 +84,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -82,18 +93,33 @@ TEMPLATES = [
     },
 ]
 
+ROOT_URLCONF = 'config.urls'
+
+import dj_database_url
+
+DATABASES = {
+    'default': dj_database_url.config(
+        # 1. First, it looks for a 'DATABASE_URL' in the environment (Production).
+        # 2. If it finds nothing, it defaults to your local SQLite file (Testing).
+        default=os.getenv('DATABASE_URL', f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+        conn_max_age=600 # Keeps connections open for 10 mins to speed up requests
+    )
+}
+
 WSGI_APPLICATION = 'config.wsgi.application'
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+CORS_ALLOWED_ORIGINS = [
+    os.getenv('FRONTEND_URL', 'http://localhost:5173'),
+]
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
+        conn_max_age=600
+    )
 }
 
 
@@ -134,6 +160,45 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 SITE_ID = 1
+ACCOUNT_EMAIL_VERIFICATION = 'none' # Skip email confirmation for now
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 
-ACCOUNT_EMAIL_VERIFICATION = 'none'
-ACCOUNT_EMAIL_REQUIRED = True
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+    
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+SAMBANOVA_API_KEY = os.getenv('SAMBANOVA_API_KEY')
+DODO_PAYMENTS_API_KEY = os.getenv('DODO_PAYMENTS_API_KEY')
+DODO_PAYMENTS_ENV = os.getenv('DODO_PAYMENTS_ENV', 'test_mode')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+# Optional: Configure token lifetime
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}

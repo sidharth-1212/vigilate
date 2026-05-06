@@ -1,22 +1,22 @@
-// frontend/src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-
-// Mock components (you can build these out in separate files later)
-const Login = () => <div className="p-10 text-white">Login Page (Insert Form Here)</div>
-const Dashboard = () => <div className="p-10 text-white">Your SaaS App Goes Here</div>
+// frontend/src/App.jsx (Update the top portion)
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Dashboard from './Dashboard';
+import LandingPage from './LandingPage';
+import Login from './Login'; // <-- Import the new Login component
 
 export default function App() {
-  // In reality, this checks your Django Token/Cookie
-  const isAuthenticated = false; 
+  // Check if they have a token in local storage
+  const isAuthenticated = !!localStorage.getItem('token'); 
 
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-gray-900">
         <Routes>
-          <Route path="/" element={<Login />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
           <Route 
             path="/dashboard" 
-            element={isAuthenticated ? <Dashboard /> : <Navigate to="/" />} 
+            element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" />} 
           />
         </Routes>
       </div>
