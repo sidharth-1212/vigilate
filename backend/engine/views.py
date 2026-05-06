@@ -176,7 +176,7 @@ def dodo_webhook(request):
         
         # The Dodo SDK checks the headers against the raw payload and your secret
         event = client.webhooks.verify(
-            payload=request.body,
+            payload=request.body.decode('utf-8'),
             headers=dict(request.headers),
             secret=webhook_secret
         )
