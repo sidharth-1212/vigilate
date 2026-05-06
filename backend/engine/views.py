@@ -191,7 +191,7 @@ def dodo_webhook(request):
     # Dodo events usually nest the actual data inside a 'data' object
     payload_data = event.get("data", {}) 
 
-    if event_type in ["subscription.created", "order.created"]:
+    if event_type in ["payment.succeeded", "subscription.active"]:
         user_id = payload_data.get("metadata", {}).get("user_id")
         
         if user_id:
