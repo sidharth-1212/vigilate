@@ -23,7 +23,7 @@ export default function Dashboard() {
 
   const handleUpgrade = async () => {
     const token = localStorage.getItem('token');
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}api/engine/checkout/`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/checkout/`, {
       method: 'POST',
       headers: { 'Authorization': `Token ${token}` }
     });
