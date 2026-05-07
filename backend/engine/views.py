@@ -360,25 +360,36 @@ def cancel_subscription(request):
     if not profile.is_pro:
         return Response({"error": "You do not have an active subscription."}, status=400)
     
-    # --- 1. Ping Dodo Payments to cancel the recurring charge ---
-    if profile.subscription_id:
-        try:
-            env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
-            client = DodoPayments(
-                bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
-                environment=env_mode
-            )
-            # Send the kill signal to Dodo
-            client.subscriptions.cancel(subscription_id=profile.subscription_id)
-        except Exception as e:
-            # If Dodo's API is unreachable, we log it, but we MUST still downgrade 
-            # the user locally so they don't get trapped.
-            print(f"Failed to reach Dodo API for cancellation: {e}")
+    if not profile.subscription_id:
+        return Response({"error": "No active billing ID found. Please contact support."}, status=400)
 
-    # --- 2. Downgrade the user locally ---
-    profile.is_pro = False
-    profile.subscription_id = None
-    profile.api_spend = 0.0 
-    profile.save()
-    
-    return Response({"success": True, "message": "Subscription cancelled. You are now on the Free tier."})
+    try:
+        env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
+        client = DodoPayments(
+            bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
+            environment=env_mode
+        )
+        
+        # 1. Fire the Kill Signal
+        response = client.subscriptions.cancel(subscription_id=profile.subscription_id)
+        
+        # 2. Verify the response! Dodo returns the subscription object.
+        # We ensure the status actually changed to canceled.
+        if response.status == 'canceled':
+            print(f"✅ API Success: Dodo confirmed cancellation for {profile.subscription_id}")
+            
+            # 3. ONLY downgrade locally if Dodo confirmed it
+            profile.is_pro = False
+            profile.subscription_id = None
+            profile.api_spend = 0.0 
+            profile.save()
+            
+            return Response({"success": True, "message": "Subscription cancelled."})
+        else:
+            print(f"⚠️ API Warning: Dodo returned status '{response.status}' instead of canceled.")
+            return Response({"error": "Cancellation pending or failed at gateway."}, status=500)
+
+    except Exception as e:
+        # 4. Catch 404s, 401s, or network timeouts
+        print(f"🚨 API FATAL: Failed to reach Dodo API for cancellation: {e}")
+        return Response({"error": "Payment gateway unreachable. Please try again later."}, status=502)
