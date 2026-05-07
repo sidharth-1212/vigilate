@@ -370,23 +370,26 @@ def cancel_subscription(request):
             environment=env_mode
         )
         
-        # 1. Fire the Kill Signal
-        response = client.subscriptions.cancel(subscription_id=profile.subscription_id)
+        # 1. Fire the Kill Signal using .update() instead of .cancel()
+        response = client.subscriptions.update(
+            subscription_id=profile.subscription_id,
+            cancel_at_next_billing_date=True,
+            cancel_reason="cancelled_by_customer"
+        )
         
-        # 2. Verify the response! Dodo returns the subscription object.
-        # We ensure the status actually changed to canceled.
-        if response.status == 'canceled':
-            print(f"✅ API Success: Dodo confirmed cancellation for {profile.subscription_id}")
+        # 2. Verify Dodo registered the cancellation intent
+        if response.cancel_at_next_billing_date:
+            print(f"✅ API Success: Dodo scheduled cancellation for {profile.subscription_id}")
             
-            # 3. ONLY downgrade locally if Dodo confirmed it
+            # 3. Downgrade locally so they lose Pro access immediately
             profile.is_pro = False
             profile.subscription_id = None
             profile.api_spend = 0.0 
             profile.save()
             
-            return Response({"success": True, "message": "Subscription cancelled."})
+            return Response({"success": True, "message": "Subscription cancelled successfully."})
         else:
-            print(f"⚠️ API Warning: Dodo returned status '{response.status}' instead of canceled.")
+            print(f"⚠️ API Warning: Dodo did not accept the cancellation request.")
             return Response({"error": "Cancellation pending or failed at gateway."}, status=500)
 
     except Exception as e:
