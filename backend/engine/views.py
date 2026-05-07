@@ -351,7 +351,7 @@ def manage_profile(request):
         request.user.last_name = request.data.get('last_name', request.user.last_name)
         request.user.save()
         return Response({"success": True})
-
+    
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
@@ -370,7 +370,7 @@ def cancel_subscription(request):
             environment=env_mode
         )
         
-        # 1. Fire the Kill Signal using .update() instead of .cancel()
+        # 1. Fire the Kill Signal
         response = client.subscriptions.update(
             subscription_id=profile.subscription_id,
             cancel_at_next_billing_date=True,
@@ -381,18 +381,14 @@ def cancel_subscription(request):
         if response.cancel_at_next_billing_date:
             print(f"✅ API Success: Dodo scheduled cancellation for {profile.subscription_id}")
             
-            # 3. Downgrade locally so they lose Pro access immediately
-            profile.is_pro = False
-            profile.subscription_id = None
-            profile.api_spend = 0.0 
-            profile.save()
+            # WE DELETED THE LOCAL DOWNGRADE HERE. 
+            # The Webhook will handle it at the end of the month!
             
-            return Response({"success": True, "message": "Subscription cancelled successfully."})
+            return Response({"success": True, "message": "Auto-renew cancelled. You keep Pro access until the end of your billing cycle."})
         else:
             print(f"⚠️ API Warning: Dodo did not accept the cancellation request.")
             return Response({"error": "Cancellation pending or failed at gateway."}, status=500)
 
     except Exception as e:
-        # 4. Catch 404s, 401s, or network timeouts
         print(f"🚨 API FATAL: Failed to reach Dodo API for cancellation: {e}")
         return Response({"error": "Payment gateway unreachable. Please try again later."}, status=502)

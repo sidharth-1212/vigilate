@@ -14,6 +14,17 @@ export default function LandingPage() {
     }
   };
 
+  const handleUpgradeRoute = () => {
+    const hasToken = !!localStorage.getItem('token');
+    if (hasToken) {
+      // If logged in, send them straight to the dashboard and pop open Dodo
+      navigate('/dashboard?triggerCheckout=true');
+    } else {
+      // If logged out, send them to login with the intent parameter
+      navigate('/login?intent=purchase');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white font-sans selection:bg-blue-500/30">
 
@@ -107,7 +118,7 @@ export default function LandingPage() {
               </ul>
 
               <button 
-                onClick={() => navigate('/login')}
+                onClick={handleAuthRoute} 
                 className="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 rounded-xl transition"
               >
                 Start Scanning
@@ -152,7 +163,7 @@ export default function LandingPage() {
               </ul>
 
               <button 
-                onClick={() => navigate('/login?intent=purchase')}
+                onClick={handleUpgradeRoute}
                 className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/50 transition transform hover:scale-[1.02]"
               >
                 Upgrade to Pro

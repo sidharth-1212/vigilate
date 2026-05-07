@@ -65,15 +65,15 @@ export default function Dashboard() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!window.confirm("Are you sure you want to downgrade? You will lose access to deep clause extraction immediately.")) return;
+    if (!window.confirm("Are you sure you want to cancel your subscription? You will retain access until the end of your current billing cycle.")) return;
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/profile/cancel/`, {
         method: 'POST',
         headers: { 'Authorization': `Token ${token}` }
       });
       if (response.ok) {
-        setIsPro(false);
-        alert("Subscription cancelled. You are now on the Free tier.");
+        // We REMOVED setIsPro(false) here because they are still Pro!
+        alert("Auto-renew cancelled successfully. You will remain on the Pro tier until the end of your cycle.");
       }
     } catch (err) {
       setError("Failed to cancel subscription.");
@@ -369,7 +369,7 @@ export default function Dashboard() {
                         <p className="text-sm text-gray-400">You have unlimited scanning capacity and access to deep clause extraction.</p>
                       </div>
                       <button onClick={handleCancelSubscription} className="w-full bg-red-900/20 border border-red-900/50 hover:bg-red-900/40 text-red-400 font-bold py-3 rounded-xl transition">
-                        Downgrade to Free
+                        Cancel Auto-Renew
                       </button>
                     </div>
                   ) : (
