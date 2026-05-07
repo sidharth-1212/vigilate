@@ -10,33 +10,31 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const handleAuthRoute = () => {
-    const hasToken = !!localStorage.getItem('token');
-    if (hasToken) {
-      navigate('/dashboard');
-    } else {
-      navigate('/login');
-    }
-  };
+  const searchParams = new URLSearchParams(window.location.search);
+  const intent = searchParams.get('intent');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
+    // Inside Login.jsx handleSubmit
     try {
       if (isRegistering) {
         await register(email, password);
-        window.location.href = '/dashboard'; // Force redirect immediately
       } else {
         await login(email, password);
-        window.location.href = '/dashboard'; // Force redirect immediately
+      }
+      
+      // If they clicked "Purchase Pro" on the landing page, 
+      // trigger the checkout immediately on the dashboard.
+      if (intent === 'purchase') {
+        window.location.href = '/dashboard?triggerCheckout=true';
+      } else {
+        window.location.href = '/dashboard';
       }
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 

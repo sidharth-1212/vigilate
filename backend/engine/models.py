@@ -2,6 +2,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from simple_history.models import HistoricalRecords
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -15,5 +16,21 @@ class UserProfile(models.Model):
     daily_scans = models.IntegerField(default=0)
     last_scan_date = models.DateField(default=timezone.now)
 
+    subscription_id = models.CharField(max_length=255, blank=True, null=True)
+
+    history = HistoricalRecords()
+
     def __str__(self):
         return f"{self.user.email} - Pro: {self.is_pro} - Spend: ${self.api_spend:.2f} - Scans Today: {self.daily_scans}"
+
+class ScanHistory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    filename = models.CharField(max_length=255)
+    risk_score = models.IntegerField(default=0) # 1-10
+    analysis_text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    history = HistoricalRecords()
+
+    class Meta:
+        ordering = ['-created_at']

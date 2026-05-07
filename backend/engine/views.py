@@ -6,13 +6,16 @@ from dotenv import load_dotenv
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
-from .models import UserProfile
+from .models import UserProfile, ScanHistory
 import requests
 from dodopayments import DodoPayments
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.utils import timezone
 from django.http import JsonResponse
+import re
+from datetime import timedelta
+import docx
 
 load_dotenv()
 
@@ -43,7 +46,7 @@ def summarize_contract(request):
     # 1. Check the Dollar Value Paywall
 
     if not profile.is_pro:
-        if profile.daily_scans >= 10:
+        if profile.daily_scans >= 5:
             return Response({
                 "error": "DAILY_LIMIT_REACHED", 
                 "message": "You have used your 10 free scans for today. Upgrade to Pro for unlimited access!"
@@ -53,44 +56,58 @@ def summarize_contract(request):
         if profile.api_spend >= MAX_ALLOWANCE:
             return Response({"error": "QUOTA_EXCEEDED", "message": "Usage limit reached."}, status=403)
 
-    pdf_file = request.FILES['file']
+    uploaded_file = request.FILES['file']
+    file_extension = os.path.splitext(uploaded_file.name)[1].lower()
+    document_text = ""
     
     try:
-        # 2. Inject Page Markers into the text
-        reader = PyPDF2.PdfReader(pdf_file)
-        document_text = ""
-        
-        for page_num, page in enumerate(reader.pages):
-            text = page.extract_text()
-            if text:
-                # Label each page clearly for the AI to reference
-                document_text += f"\n\n--- [PAGE {page_num + 1}] ---\n\n{text}"
+        # --- RESTORED FEATURE: PDF & DOCX Support ---
+        if file_extension == '.pdf':
+            reader = PyPDF2.PdfReader(uploaded_file)
+            for page_num, page in enumerate(reader.pages):
+                text = page.extract_text()
+                if text:
+                    document_text += f"\n\n--- [PAGE {page_num + 1}] ---\n\n{text}"
+                    
+        elif file_extension == '.docx':
+            doc = docx.Document(uploaded_file)
+            paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+            paras_per_page = 20 
+            for page_num in range(0, len(paragraphs), paras_per_page):
+                chunk = "\n".join(paragraphs[page_num:page_num + paras_per_page])
+                document_text += f"\n\n--- [PAGE {(page_num // paras_per_page) + 1}] ---\n\n{chunk}"
                 
-        # Optional: Still truncate if the document is absurdly large to prevent immediate timeout
+        else:
+            return Response({"error": "Unsupported file format. Please upload a PDF or DOCX."}, status=400)
+
+        # Truncate to prevent timeout
         document_text = document_text[:50000] 
 
-        # 3. The Upgraded, Strict Prompt
-        # Flush these strings all the way to the left margin!
-        system_prompt = """You are an elite corporate attorney and legal analyst. Your goal is to review legal documents, contracts, bylaws, and terms of service. You must protect the user from predatory clauses and explain the document in plain, highly detailed English. Do not skip sections."""
+        # --- TIER FEATURE: Deep Extraction vs Basic Summary ---
+        if profile.is_pro:
+            system_prompt = """You are an elite corporate attorney and legal analyst. Your goal is to review legal documents, contracts, bylaws, and terms of service. You must protect the user from predatory clauses and perform deep clause extraction. Identify hidden indemnification traps, non-competes, IP grabs, and liability caps. Be extremely comprehensive and detailed. Ensure every red flag includes a page citation like [PAGE X]. Format headers using simple CAPS."""
+        else:
+            system_prompt = """You are a legal assistant. Provide a basic, surface-level summary of this document and highlight any obvious general risks. Keep the analysis brief. Ensure any red flags include a page citation like [PAGE X]. Format headers using simple CAPS."""
 
-        user_prompt = f"""Analyze the following legal document. You MUST cite the exact page number for every point using the [PAGE X] markers. 
-If this is not a standard contract (e.g., bylaws, NDA, terms of use), adapt your analysis to summarize the rules, rights, and risks for the relevant parties. Be extremely comprehensive and detailed.
+        # The strict JSON/Markdown instructions apply to BOTH tiers
+        user_prompt = f"""You MUST start your response with a risk score on the very first line in this exact format: "RISK_SCORE: X" (where X is a number from 1 to 10, with 10 being highly predatory). Then provide the analysis.
+        Analyze the following legal document. You MUST cite the exact page number for every point using the [PAGE X] markers. 
 
 Format your response exactly using Markdown with these headings:
 
-### 📄 Executive Summary
+### Executive Summary
 (A comprehensive overview of the document, its purpose, and the parties involved).
 
-### 🎯 Core Terms & Fulfillments
-* **[Term]** (Page X): What are the main conditions, rules, or criteria outlined in this document?
+### Core Terms & Fulfillments
+* **[Term]** (Page X): What are the main conditions, rules, or criteria outlined?
 
-### 💰 Benefits & Rights
+### Benefits & Rights
 * **[Benefit/Right]** (Page X): What rights, compensation, or protections are granted?
 
-### ⚖️ Responsibilities & Restrictions
+### Responsibilities & Restrictions
 * **[Duty]** (Page X): What specific rules, obligations, or restrictions are imposed?
 
-### 🚩 Red Flags & Risks
+### Red Flags & Risks
 * **[Risk]** (Page X): What clauses are predatory, dangerous, highly unusual, or severely limit liability?
 
 ---
@@ -103,10 +120,29 @@ DOCUMENT TEXT:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.1, # Keep it low for factual legal accuracy
+            temperature=0.1, 
             top_p=0.1
         )
+
+        raw_content = response.choices[0].message.content
+
+        risk_score = 5 # Default
+        match = re.search(r'RISK_SCORE[^\d]*(\d+)', raw_content, re.IGNORECASE)
+        if match:
+            try:
+                extracted_score = int(match.group(1))
+                if 1 <= extracted_score <= 10:
+                    risk_score = extracted_score
+            except ValueError:
+                pass
         
+        scan_record = ScanHistory.objects.create(
+            user=request.user,
+            filename=uploaded_file.name,
+            risk_score=risk_score,
+            analysis_text=raw_content
+        )
+
         # 4. Calculate the exact cost of this request
         prompt_tokens = response.usage.prompt_tokens
         completion_tokens = response.usage.completion_tokens
@@ -126,7 +162,9 @@ DOCUMENT TEXT:
         return Response({
             "success": True, 
             "analysis": response.choices[0].message.content,
+            "scan_id": scan_record.id,
             "cost_incurred": round(total_cost, 4),
+            "risk_score": risk_score,
             "remaining_balance": round(MAX_ALLOWANCE - profile.api_spend, 2)
         })
 
@@ -137,6 +175,8 @@ DOCUMENT TEXT:
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def create_checkout(request):
+    if request.user.userprofile.is_pro:
+        return Response({"error": "You are already a Pro user."}, status=400)
     env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
     client = DodoPayments(
         bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
@@ -145,10 +185,11 @@ def create_checkout(request):
 
     # Use your production URL from .env
     return_url = f"{os.getenv('FRONTEND_URL')}/dashboard?payment=success"
+    product_id = os.getenv('PRODUCT_ID')
 
     try:
         session = client.checkout_sessions.create(
-            product_cart=[{"product_id": "pdt_0NeCR8svhzyOinZWE5NZf", "quantity": 1}], # Ensure this is your LIVE ID
+            product_cart=[{"product_id": product_id, "quantity": 1}], # Ensure this is your LIVE ID
             customer={
                 "email": request.user.email, 
                 "name": request.user.get_full_name() or request.user.username
@@ -170,21 +211,18 @@ def dodo_webhook(request):
     try:
         env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
         
-        # 1. Pass the webhook_key directly into the client, just like the docs!
         client = DodoPayments(
             bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
             environment=env_mode,
             webhook_key=webhook_secret 
         )
         
-        # 2. Explicitly map the headers to prevent Django from mangling the keys
         dodo_headers = {
             "webhook-id": request.headers.get("webhook-id", ""),
             "webhook-signature": request.headers.get("webhook-signature", ""),
             "webhook-timestamp": request.headers.get("webhook-timestamp", ""),
         }
 
-        # 3. Unwrap using only the pristine body bytes and mapped headers
         client.webhooks.unwrap(
             request.body,
             headers=dodo_headers
@@ -200,15 +238,40 @@ def dodo_webhook(request):
         event_type = payload.get("type")
         payload_data = payload.get("data", {}) 
 
+        # --- EVENT 1 & 2: Successful Payments & Upgrades ---
         if event_type in ["payment.succeeded", "subscription.active"]:
             user_id = payload_data.get("metadata", {}).get("user_id")
+            subscription_id = payload_data.get("subscription_id")
             
             if user_id:
                 profile = UserProfile.objects.get(user__id=user_id)
                 profile.is_pro = True
+                if subscription_id:
+                    profile.subscription_id = subscription_id
                 profile.save()
                 print(f"💰 SUCCESS: User {user_id} securely upgraded to PRO!")
                 return JsonResponse({"status": "success"}, status=200)
+
+        # --- EVENT 3: The Kill Switch (Downgrades) ---
+        elif event_type in ["subscription.canceled", "subscription.cancelled"]:
+            subscription_id = payload_data.get("subscription_id")
+            if subscription_id:
+                try:
+                    profile = UserProfile.objects.get(subscription_id=subscription_id)
+                    profile.is_pro = False
+                    profile.subscription_id = None
+                    profile.api_spend = 0.0
+                    profile.save()
+                    print(f"📉 ALERT: Subscription {subscription_id} cancelled.")
+                    return JsonResponse({"status": "success"}, status=200)
+                except UserProfile.DoesNotExist:
+                    pass
+                    
+        # --- EVENT 4: Payment Failure Logging ---
+        elif event_type == "payment.failed":
+            user_id = payload_data.get("metadata", {}).get("user_id", "Unknown")
+            print(f"⚠️ WARNING: Payment failed or declined for user {user_id}.")
+            return JsonResponse({"status": "logged"}, status=200)
 
         return JsonResponse({"status": "ignored"}, status=200)
         
@@ -217,3 +280,92 @@ def dodo_webhook(request):
     except Exception as e:
         print(f"🚨 Webhook Processing Error: {e}")
         return JsonResponse({"error": "Server error"}, status=500)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_scan_history(request):
+    profile = request.user.userprofile
+    
+    # --- TIER FEATURE: Unlimited vs 24-Hour History ---
+    if profile.is_pro:
+        scans = ScanHistory.objects.filter(user=request.user).order_by('-created_at')
+    else:
+        # Free Tier: Only show scans from the last 24 hours
+        time_threshold = timezone.now() - timedelta(hours=24)
+        scans = ScanHistory.objects.filter(user=request.user, created_at__gte=time_threshold).order_by('-created_at')
+        
+    data = [{
+        "id": s.id,
+        "filename": s.filename,
+        "risk_score": s.risk_score,
+        "analysis": s.analysis_text,
+        "date": s.created_at.strftime("%b %d, %Y")
+    } for s in scans]
+    return Response(data)
+
+@api_view(['DELETE'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_scan(request, scan_id):
+    try:
+        # We ensure they can only delete THEIR OWN scans
+        scan = ScanHistory.objects.get(id=scan_id, user=request.user)
+        scan.delete()
+        return Response({"success": True})
+    except ScanHistory.DoesNotExist:
+        return Response({"error": "Scan not found or access denied"}, status=404)
+    
+@api_view(['GET', 'PUT'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def manage_profile(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == 'GET':
+        return Response({
+            "first_name": request.user.first_name,
+            "last_name": request.user.last_name,
+            "email": request.user.email,
+            "is_pro": profile.is_pro,
+            "api_spend": float(profile.api_spend),
+            "daily_scans": profile.daily_scans
+        })
+
+    if request.method == 'PUT':
+        # Update user details
+        request.user.first_name = request.data.get('first_name', request.user.first_name)
+        request.user.last_name = request.data.get('last_name', request.user.last_name)
+        request.user.save()
+        return Response({"success": True})
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def cancel_subscription(request):
+    profile = request.user.userprofile
+    if not profile.is_pro:
+        return Response({"error": "You do not have an active subscription."}, status=400)
+    
+    # --- 1. Ping Dodo Payments to cancel the recurring charge ---
+    if profile.subscription_id:
+        try:
+            env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
+            client = DodoPayments(
+                bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
+                environment=env_mode
+            )
+            # Send the kill signal to Dodo
+            client.subscriptions.cancel(subscription_id=profile.subscription_id)
+        except Exception as e:
+            # If Dodo's API is unreachable, we log it, but we MUST still downgrade 
+            # the user locally so they don't get trapped.
+            print(f"Failed to reach Dodo API for cancellation: {e}")
+
+    # --- 2. Downgrade the user locally ---
+    profile.is_pro = False
+    profile.subscription_id = None
+    profile.api_spend = 0.0 
+    profile.save()
+    
+    return Response({"success": True, "message": "Subscription cancelled. You are now on the Free tier."})
