@@ -336,14 +336,40 @@ def manage_profile(request):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
 
     if request.method == 'GET':
-        return Response({
+        # 1. Base response data
+        response_data = {
             "first_name": request.user.first_name,
             "last_name": request.user.last_name,
             "email": request.user.email,
             "is_pro": profile.is_pro,
             "api_spend": float(profile.api_spend),
-            "daily_scans": profile.daily_scans
-        })
+            "daily_scans": profile.daily_scans,
+            "cancel_at_period_end": False,
+            "billing_date": None
+        }
+
+        # 2. Fetch live subscription data from Dodo Payments
+        if profile.is_pro and profile.subscription_id:
+            try:
+                env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
+                client = DodoPayments(
+                    bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
+                    environment=env_mode
+                )
+                sub = client.subscriptions.get(subscription_id=profile.subscription_id)
+                
+                # Update response with live Dodo data
+                response_data["cancel_at_period_end"] = sub.cancel_at_next_billing_date
+                
+                # Safely extract the billing date
+                date_val = getattr(sub, 'next_billing_date', None)
+                if date_val:
+                    response_data["billing_date"] = str(date_val)
+                    
+            except Exception as e:
+                print(f"Failed to fetch live Dodo subscription: {e}")
+
+        return Response(response_data)
 
     if request.method == 'PUT':
         # Update user details

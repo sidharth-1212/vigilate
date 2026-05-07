@@ -27,6 +27,9 @@ export default function Dashboard() {
   const [profileData, setProfileData] = useState({ first_name: '', last_name: '', email: '' });
   const [saveMessage, setSaveMessage] = useState('');
 
+  const [cancelAtEnd, setCancelAtEnd] = useState(false);
+  const [billingDate, setBillingDate] = useState("");
+
   const fetchProfile = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/profile/`, {
@@ -39,6 +42,15 @@ export default function Dashboard() {
         last_name: data.last_name || '',
         email: data.email || ''
       });
+      
+      // NEW: Save billing dates
+      setCancelAtEnd(data.cancel_at_period_end || false);
+      if (data.billing_date) {
+        // Format the date to look nice (e.g., "June 7, 2026")
+        setBillingDate(new Date(data.billing_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));
+      } else {
+        setBillingDate("");
+      }
     } catch (err) {
       console.error("Failed to fetch profile");
     }
@@ -72,8 +84,8 @@ export default function Dashboard() {
         headers: { 'Authorization': `Token ${token}` }
       });
       if (response.ok) {
-        // We REMOVED setIsPro(false) here because they are still Pro!
         alert("Auto-renew cancelled successfully. You will remain on the Pro tier until the end of your cycle.");
+        fetchProfile(); // <-- ADD THIS LINE: Refreshes the UI instantly
       }
     } catch (err) {
       setError("Failed to cancel subscription.");
@@ -359,18 +371,39 @@ export default function Dashboard() {
                   {isPro ? (
                     <div className="flex-1 flex flex-col">
                       <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-6 mb-6 flex-1">
+                        
                         <div className="flex justify-between items-start mb-4">
                           <div>
                             <div className="text-blue-400 font-bold mb-1 flex items-center gap-2"><Zap className="w-4 h-4"/> Command Center Pro</div>
                             <div className="text-3xl font-black text-white">$19<span className="text-sm text-gray-500 font-normal">/mo</span></div>
                           </div>
-                          <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded border border-green-500/50 uppercase tracking-widest">Active</span>
+                          
+                          {/* CONDITIONAL BADGE */}
+                          {cancelAtEnd ? (
+                            <span className="bg-yellow-500/20 text-yellow-400 text-xs px-2 py-1 rounded border border-yellow-500/50 uppercase tracking-widest">Cancelling</span>
+                          ) : (
+                            <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded border border-green-500/50 uppercase tracking-widest">Active</span>
+                          )}
                         </div>
+                        
+                        {/* CONDITIONAL DATE TEXT */}
+                        {billingDate && (
+                          cancelAtEnd ? (
+                            <p className="text-sm text-yellow-400 mb-4 font-bold tracking-wide">Expires on: {billingDate}</p>
+                          ) : (
+                            <p className="text-sm text-gray-300 mb-4 font-bold tracking-wide">Next billing date: {billingDate}</p>
+                          )
+                        )}
+                        
                         <p className="text-sm text-gray-400">You have unlimited scanning capacity and access to deep clause extraction.</p>
                       </div>
-                      <button onClick={handleCancelSubscription} className="w-full bg-red-900/20 border border-red-900/50 hover:bg-red-900/40 text-red-400 font-bold py-3 rounded-xl transition">
-                        Cancel Auto-Renew
-                      </button>
+
+                      {/* CONDITIONAL CANCEL BUTTON - Hides if already cancelled */}
+                      {!cancelAtEnd && (
+                        <button onClick={handleCancelSubscription} className="w-full bg-red-900/20 border border-red-900/50 hover:bg-red-900/40 text-red-400 font-bold py-3 rounded-xl transition mt-auto">
+                          Cancel Auto-Renew
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="flex-1 flex flex-col">
