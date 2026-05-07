@@ -356,7 +356,7 @@ def manage_profile(request):
                     bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
                     environment=env_mode
                 )
-                sub = client.subscriptions.get(subscription_id=profile.subscription_id)
+                sub = client.subscriptions.retrieve(profile.subscription_id)
                 
                 # Update response with live Dodo data
                 response_data["cancel_at_period_end"] = sub.cancel_at_next_billing_date
