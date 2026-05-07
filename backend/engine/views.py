@@ -177,19 +177,29 @@ DOCUMENT TEXT:
 def create_checkout(request):
     if request.user.userprofile.is_pro:
         return Response({"error": "You are already a Pro user."}, status=400)
+        
     env_mode = os.getenv('DODO_PAYMENTS_ENV', 'live_mode')
     client = DodoPayments(
         bearer_token=os.getenv("DODO_PAYMENTS_API_KEY"),
         environment=env_mode
     )
 
-    # Use your production URL from .env
     return_url = f"{os.getenv('FRONTEND_URL')}/dashboard?payment=success"
     product_id = os.getenv('PRODUCT_ID')
 
+    # 1. Catch missing environment variables
+    if not product_id:
+        print("🚨 Backend Error: PRODUCT_ID is missing from .env")
+        return Response({"error": "Billing configuration error."}, status=500)
+        
+    # 2. Catch missing user emails (The usual culprit for 422s)
+    if not request.user.email:
+        print(f"🚨 Backend Error: User {request.user.username} has no email address.")
+        return Response({"error": "Your account requires an email address for billing. Please update it in the Profile tab."}, status=400)
+
     try:
         session = client.checkout_sessions.create(
-            product_cart=[{"product_id": product_id, "quantity": 1}], # Ensure this is your LIVE ID
+            product_cart=[{"product_id": product_id, "quantity": 1}],
             customer={
                 "email": request.user.email, 
                 "name": request.user.get_full_name() or request.user.username
@@ -198,8 +208,11 @@ def create_checkout(request):
             metadata={"user_id": str(request.user.id)}
         )
         return Response({"checkout_url": session.checkout_url})
+        
     except Exception as e:
-        return Response({"error": "Failed to create checkout"}, status=500)
+        # 3. Expose the actual API error to the terminal!
+        print(f"🚨 Dodo API Rejection: {str(e)}")
+        return Response({"error": f"Gateway error: {str(e)}"}, status=500)
    
 @csrf_exempt 
 def dodo_webhook(request):
