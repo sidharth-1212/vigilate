@@ -68,7 +68,7 @@ export default function TermsOfService() {
 
           <section>
             <h2 className="text-xl font-bold text-white border-b border-gray-700/50 pb-2 mb-4">6. Contact Information</h2>
-            <p>If you have any questions about these Terms, please contact us at <strong>sidharthkrishnakumar12@gmail.com</strong>.</p>
+            <p>If you have any questions about these Terms, please contact us at <strong>architechsystems.lk@gmail.com</strong>.</p>
           </section>
 
         </div>

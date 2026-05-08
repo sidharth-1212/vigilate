@@ -40,16 +40,16 @@ def summarize_contract(request):
 
 
     today = timezone.now().date()
-    if profile.last_scan_date < today:
+    if profile.last_scan_date.month != today.month or profile.last_scan_date.year != today.year:
         profile.daily_scans = 0
         profile.last_scan_date = today
-    # 1. Check the Dollar Value Paywall
 
+    # 1. Check the Paywall Limits
     if not profile.is_pro:
         if profile.daily_scans >= 5:
             return Response({
-                "error": "DAILY_LIMIT_REACHED", 
-                "message": "You have used your 10 free scans for today. Upgrade to Pro for unlimited access!"
+                "error": "DAILY_LIMIT_REACHED", # Keeping this error code so the React frontend doesn't break
+                "message": "You have used your 5 free scans for this month. Upgrade to Pro for unlimited access!"
             }, status=403)
     else:
         # Pro users are limited by their $19 API spend quota
@@ -108,7 +108,11 @@ Format your response exactly using Markdown with these headings:
 * **[Duty]** (Page X): What specific rules, obligations, or restrictions are imposed?
 
 ### Red Flags & Risks
-* **[Risk]** (Page X): What clauses are predatory, dangerous, highly unusual, or severely limit liability?
+> **[Risk 1]** (Page X): What clauses are predatory, dangerous, highly unusual, or severely limit liability?
+
+> **[Risk 2]** (Page Y): Another risk description...
+
+(CRITICAL INSTRUCTION: You MUST leave a completely blank empty line between each risk. Every individual risk must start with its own '>' character. Do NOT combine them into a single block).
 
 ---
 DOCUMENT TEXT:

@@ -30,6 +30,17 @@ export default function Dashboard() {
   const [cancelAtEnd, setCancelAtEnd] = useState(false);
   const [billingDate, setBillingDate] = useState("");
 
+  const handleNewScan = () => {
+    setFile(null);
+    setResult("");
+    setError("");
+    setTerminalLogs([]);
+    setCurrentScore(null);
+    setActiveScanId(null);
+    setShowPaywall(false);
+    setCurrentView('scanner'); // Forces them back to the scanner tab if they were on their profile
+  };
+
   const fetchProfile = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/profile/`, {
@@ -296,6 +307,16 @@ export default function Dashboard() {
             <User className="w-4 h-4" /> Profile
           </button>
         </div>
+
+        {/* --- NEW: GLOBAL 'NEW SCAN' BUTTON --- */}
+        <div className="p-4 border-b border-gray-800">
+          <button 
+            onClick={handleNewScan}
+            className="w-full bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 text-blue-400 font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition shadow-inner"
+          >
+            <Plus className="w-4 h-4" /> New Surveillance Scan
+          </button>
+        </div>
         
         <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
           {scans.length === 0 && <p className="text-gray-600 text-xs text-center mt-10">No documents indexed yet.</p>}
@@ -306,6 +327,7 @@ export default function Dashboard() {
                 setResult(scan.analysis); 
                 setCurrentScore(scan.risk_score);
                 setActiveScanId(scan.id); // Set the active scan when clicked from history
+                setCurrentView('scanner');
               }}
               className={`w-full text-left p-3 rounded-lg transition border group flex justify-between items-start ${activeScanId === scan.id ? 'bg-gray-800 border-gray-600' : 'hover:bg-gray-800 border-transparent hover:border-gray-700'}`}
             >
@@ -410,7 +432,9 @@ export default function Dashboard() {
                       <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-6 flex-1">
                         <div className="text-gray-300 font-bold mb-1">Reconnaissance (Free)</div>
                         <div className="text-3xl font-black text-white mb-4">$0</div>
-                        <p className="text-sm text-gray-500 mb-2">You are limited to 5 basic scans per day.</p>
+                        
+                        {/* --- TEXT TWEAK HERE --- */}
+                        <p className="text-sm text-gray-500 mb-2">You are limited to 5 basic scans per month.</p>
                       </div>
                       <button onClick={handleUpgrade} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
                         Upgrade to Pro
@@ -505,8 +529,18 @@ export default function Dashboard() {
 
                 <RiskScorecard score={currentScore || 5} />
 
-                <div className="bg-gray-800/30 border border-gray-700/50 rounded-2xl p-8 shadow-inner prose prose-invert prose-blue max-w-none">
-                  <ReactMarkdown>{result}</ReactMarkdown>
+                {/* REPLACED: Added the magic Tailwind selector to make blockquote bold text red */}
+                <div className="mt-4 prose prose-invert max-w-none text-gray-300 leading-relaxed
+                  prose-h3:text-2xl prose-h3:font-bold prose-h3:text-white prose-h3:border-b prose-h3:border-gray-800 prose-h3:pb-2 prose-h3:mt-12 prose-h3:mb-6
+                  prose-strong:text-gray-200 
+                  prose-ul:space-y-4 prose-li:text-gray-400 prose-li:marker:text-gray-600
+                  prose-blockquote:bg-red-900/10 prose-blockquote:border-l-4 prose-blockquote:border-red-500 prose-blockquote:p-6 prose-blockquote:rounded-r-lg prose-blockquote:font-normal prose-blockquote:not-italic prose-blockquote:text-gray-300 prose-blockquote:my-8
+                  prose-blockquote:before:content-none prose-blockquote:after:content-none
+                  [&_blockquote_strong]:text-red-400
+                ">
+                  <ReactMarkdown>
+                    {result.replace(/RISK_SCORE:\s*\d+/i, '').trim()}
+                  </ReactMarkdown>
                 </div>
               </div>
             )}

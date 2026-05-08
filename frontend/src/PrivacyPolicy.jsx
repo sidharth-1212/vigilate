@@ -61,7 +61,7 @@ export default function PrivacyPolicy() {
             <h2 className="text-xl font-bold text-white border-b border-gray-700/50 pb-2 mb-4">5. Contact Us</h2>
             <p>If you wish to exercise your data rights or have questions about this policy, contact us:</p>
             <ul className="list-disc pl-5 space-y-2">
-              <li>By email: sidharthkrishnakumar12@gmail.com</li>
+              <li>By email: architechsystems.lk@gmail.com</li>
             </ul>
           </section>
 
