@@ -80,8 +80,10 @@ def summarize_contract(request):
         else:
             return Response({"error": "Unsupported file format. Please upload a PDF or DOCX."}, status=400)
 
-        # Truncate to prevent timeout
-        document_text = document_text[:50000] 
+        if profile.is_pro:
+            document_text = document_text[:600000]  # ~150 pages
+        else:
+            document_text = document_text[:50000]
 
         # --- TIER FEATURE: Deep Extraction vs Basic Summary ---
         if profile.is_pro:
@@ -89,9 +91,11 @@ def summarize_contract(request):
         else:
             system_prompt = """You are a legal assistant. Provide a basic, surface-level summary of this document and highlight any obvious general risks. Keep the analysis brief. Ensure any red flags include a page citation like [PAGE X]. Format headers using simple CAPS."""
 
-        # The strict JSON/Markdown instructions apply to BOTH tiers
+        # 2. FIXED PROMPT: Force the AI to read to the absolute end
         user_prompt = f"""You MUST start your response with a risk score on the very first line in this exact format: "RISK_SCORE: X" (where X is a number from 1 to 10, with 10 being highly predatory). Then provide the analysis.
-        Analyze the following legal document. You MUST cite the exact page number for every point using the [PAGE X] markers. 
+        
+Analyze the following legal document. You MUST analyze the ENTIRE document from start to finish. Do not stop scanning until you have reached the absolute final page. You MUST cite the exact page number for every point using the [PAGE X] markers. 
+You are strictly forbidden from summarizing only the first half of the document. You must extract every single highly predatory clause you can find, no matter how deep it is buried.
 
 Format your response exactly using Markdown with these headings:
 
@@ -125,7 +129,8 @@ DOCUMENT TEXT:
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.1, 
-            top_p=0.1
+            top_p=0.1,
+            max_tokens=4096
         )
 
         raw_content = response.choices[0].message.content
