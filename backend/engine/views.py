@@ -16,6 +16,7 @@ from django.http import JsonResponse
 import re
 from datetime import timedelta
 import docx
+from decimal import Decimal
 
 load_dotenv()
 
@@ -57,6 +58,10 @@ def summarize_contract(request):
             return Response({"error": "QUOTA_EXCEEDED", "message": "Usage limit reached."}, status=403)
 
     uploaded_file = request.FILES['file']
+    if uploaded_file.size > 10 * 1024 * 1024:
+        return Response({
+            "error": "File too large. Maximum size is 10MB to ensure stable processing."
+        }, status=400)
     file_extension = os.path.splitext(uploaded_file.name)[1].lower()
     document_text = ""
     
@@ -160,8 +165,8 @@ DOCUMENT TEXT:
         cost_input = (prompt_tokens / 1_000_000) * INPUT_TOKEN_PRICE_PER_M
         cost_output = (completion_tokens / 1_000_000) * OUTPUT_TOKEN_PRICE_PER_M
         total_cost = cost_input + cost_output
+        profile.api_spend += Decimal(str(total_cost))
         
-        profile.api_spend += total_cost
         # 5. Update the user's spending profile
         if not profile.is_pro:
             profile.daily_scans += 1
@@ -249,6 +254,11 @@ def dodo_webhook(request):
             request.body,
             headers=dodo_headers
         )
+
+        verified_payload = client.webhooks.unwrap(
+            request.body,
+            headers=dodo_headers
+        )
         
     except Exception as e:
         print(f"🚨 Security Alert: Webhook verification failed! {e}")
@@ -256,9 +266,8 @@ def dodo_webhook(request):
 
     # If unwrap succeeds, safely read the JSON
     try:
-        payload = json.loads(request.body)
-        event_type = payload.get("type")
-        payload_data = payload.get("data", {}) 
+        event_type = verified_payload.get("type")
+        payload_data = verified_payload.get("data", {})
 
         # --- EVENT 1 & 2: Successful Payments & Upgrades ---
         if event_type in ["payment.succeeded", "subscription.active"]:

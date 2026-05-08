@@ -10,7 +10,7 @@ class UserProfile(models.Model):
     dodo_customer_id = models.CharField(max_length=255, blank=True, null=True)
     
     # PRO TIER: Tracks the $19 API usage quota based on token cost
-    api_spend = models.FloatField(default=0.0)
+    api_spend = models.DecimalField(max_digits=10, decimal_places=4, default=0.0000)
     
     # FREE TIER: Tracks the 10 scans per day limit
     daily_scans = models.IntegerField(default=0)

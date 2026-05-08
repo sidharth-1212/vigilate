@@ -32,6 +32,11 @@ export default function Dashboard() {
   const [cancelAtEnd, setCancelAtEnd] = useState(false);
   const [billingDate, setBillingDate] = useState("");
 
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleNewScan = () => {
     setFile(null);
     setResult("");
@@ -48,6 +53,13 @@ export default function Dashboard() {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/profile/`, {
         headers: { 'Authorization': `Token ${token}` }
       });
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return;
+      }
+
       const data = await response.json();
       setIsPro(data.is_pro);
       setProfileData({
@@ -71,6 +83,8 @@ export default function Dashboard() {
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
+    if (isSavingProfile) return;
+    setIsSavingProfile(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/profile/`, {
         method: 'PUT',
@@ -86,11 +100,15 @@ export default function Dashboard() {
       }
     } catch (err) {
       setError("Failed to update profile.");
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
   const handleCancelSubscription = async () => {
     if (!window.confirm("Are you sure you want to cancel your subscription? You will retain access until the end of your current billing cycle.")) return;
+    if (isCancelling) return;
+    setIsCancelling(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/profile/cancel/`, {
         method: 'POST',
@@ -102,6 +120,8 @@ export default function Dashboard() {
       }
     } catch (err) {
       setError("Failed to cancel subscription.");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -135,6 +155,13 @@ export default function Dashboard() {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/history/`, {
         headers: { 'Authorization': `Token ${token}` }
       });
+      
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return;
+      }
+
       const data = await response.json();
       setScans(data);
     } catch (err) {
@@ -147,6 +174,9 @@ export default function Dashboard() {
     if (e) e.stopPropagation(); // Prevents clicking the sidebar button from triggering the select
     
     if (!window.confirm("Delete this surveillance report permanently?")) return;
+
+    if (isDeleting) return;
+    setIsDeleting(true);
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/history/${id}/`, {
@@ -169,10 +199,14 @@ export default function Dashboard() {
       }
     } catch (err) {
       setError("Network error while deleting.");
+    } finally {
+      setIsDeleting(false); // RELEASE THE LOCK
     }
   };
 
   const handleUpgrade = async () => {
+    if (isUpgrading) return;
+    setIsUpgrading(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/engine/checkout/`, {
         method: 'POST',
@@ -184,9 +218,11 @@ export default function Dashboard() {
         window.location.href = data.checkout_url;
       } else {
         setError("Failed to generate checkout link.");
+        setIsUpgrading(false);
       }
     } catch (err) {
       setError("Failed to connect to the payment gateway.");
+      setIsUpgrading(false);
     }
   };
 
@@ -400,8 +436,12 @@ export default function Dashboard() {
                         <input type="text" value={profileData.last_name} onChange={(e) => setProfileData({...profileData, last_name: e.target.value})} className="w-full bg-gray-900 border border-gray-700 focus:border-blue-500 rounded-lg px-4 py-3 outline-none transition" />
                       </div>
                     </div>
-                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition mt-4">
-                      Save Changes
+                    <button 
+                      type="submit" 
+                      disabled={isSavingProfile}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSavingProfile ? "SAVING..." : "Save Changes"}
                     </button>
                     {saveMessage && <p className="text-green-400 text-sm text-center mt-2">{saveMessage}</p>}
                   </form>
@@ -443,8 +483,12 @@ export default function Dashboard() {
 
                       {/* CONDITIONAL CANCEL BUTTON - Hides if already cancelled */}
                       {!cancelAtEnd && (
-                        <button onClick={handleCancelSubscription} className="w-full bg-red-900/20 border border-red-900/50 hover:bg-red-900/40 text-red-400 font-bold py-3 rounded-xl transition mt-auto">
-                          Cancel Auto-Renew
+                        <button 
+                          onClick={handleCancelSubscription} 
+                          disabled={isCancelling}
+                          className="w-full bg-red-900/20 border border-red-900/50 hover:bg-red-900/40 text-red-400 font-bold py-3 rounded-xl transition mt-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isCancelling ? "PROCESSING..." : "Cancel Auto-Renew"}
                         </button>
                       )}
                     </div>
@@ -457,8 +501,8 @@ export default function Dashboard() {
                         {/* --- TEXT TWEAK HERE --- */}
                         <p className="text-sm text-gray-500 mb-2">You are limited to 5 basic scans per month.</p>
                       </div>
-                      <button onClick={handleUpgrade} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition">
-                        Upgrade to Pro
+                      <button disabled={isUpgrading} onClick={handleUpgrade} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isUpgrading ? "REDIRECTING..." : "Upgrade to Pro"}
                       </button>
                     </div>
                   )}
@@ -490,10 +534,10 @@ export default function Dashboard() {
                     className="mb-8 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:bg-blue-600/10 file:text-blue-400 file:border-0 font-mono"
                   />
                   <button 
-                    type="submit" disabled={!file}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-xl shadow-blue-900/20 transition disabled:opacity-30"
+                    type="submit" disabled={!file || loading}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-xl shadow-blue-900/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    START ANALYSIS
+                    {loading ? "PROCESSING..." : "START ANALYSIS"}
                   </button>
                 </form>
               </div>
@@ -583,12 +627,9 @@ export default function Dashboard() {
                 <Shield className="mx-auto h-12 w-12 text-blue-400 mb-4" />
                 <h2 className="text-2xl font-bold mb-2">Surveillance Limit Reached</h2>
                 <p className="text-gray-400 mb-6">Upgrade to Pro to unlock premium AI token allowance and analyze massive legal documents without restrictions.</p>
-                <button 
-                  onClick={handleUpgrade}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105"
-                >
-                  Upgrade to Pro - $19
-                </button>
+                <button disabled={isUpgrading} onClick={handleUpgrade} className="w-full bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isUpgrading ? "REDIRECTING..." : "Upgrade to Pro"}
+                      </button>
               </div>
             )}
           </>)}
