@@ -202,7 +202,7 @@ export default function Dashboard() {
       handleUpgrade();
     }
   }, [location.search]);
-  
+
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return;
@@ -264,6 +264,7 @@ export default function Dashboard() {
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const score = currentScore || "N/A"; 
 
+    // --- Cover Header ---
     doc.setFillColor(17, 24, 39); 
     doc.rect(0, 0, 210, 40, 'F');
     doc.setFont("helvetica", "bold");
@@ -274,6 +275,7 @@ export default function Dashboard() {
     doc.setTextColor(156, 163, 175); 
     doc.text("LEGAL SURVEILLANCE & CLAUSE EXTRACTION", 20, 32);
 
+    // --- Score Header ---
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
     doc.text(`Scan Date: ${date}`, 20, 55);
@@ -286,13 +288,24 @@ export default function Dashboard() {
     doc.setDrawColor(229, 231, 235); 
     doc.line(20, 75, 190, 75);
 
+    // --- Body Text with Pagination ---
     doc.setTextColor(31, 41, 55); 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
 
     const cleanResult = result.replace(/### /g, '').replace(/\*\*/g, '').replace(/RISK_SCORE: \d+/g, ''); 
     const splitText = doc.splitTextToSize(cleanResult, 170);
-    doc.text(splitText, 20, 85);
+    
+    let y = 85; // Starting height
+    for (let i = 0; i < splitText.length; i++) {
+      if (y > 280) { // If we hit the bottom of the A4 page
+        doc.addPage();
+        y = 20; // Reset Y to the top of the new page
+      }
+      doc.text(splitText[i], 20, y);
+      y += 6; // Move down 6 units for the next line
+    }
+    
     doc.save(`vigilate_report_${new Date().getTime()}.pdf`);
   };
 

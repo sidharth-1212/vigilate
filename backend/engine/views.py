@@ -87,15 +87,16 @@ def summarize_contract(request):
 
         # --- TIER FEATURE: Deep Extraction vs Basic Summary ---
         if profile.is_pro:
-            system_prompt = """You are an elite corporate attorney and legal analyst. Your goal is to review legal documents, contracts, bylaws, and terms of service. You must protect the user from predatory clauses and perform deep clause extraction. Identify hidden indemnification traps, non-competes, IP grabs, and liability caps. Be extremely comprehensive and detailed. Ensure every red flag includes a page citation like [PAGE X]. Format headers using simple CAPS."""
+            system_prompt = """You are an elite corporate attorney and legal analyst. Your goal is to review legal documents, contracts, bylaws, and terms of service. You must protect the user from predatory clauses and perform deep clause extraction. Identify hidden indemnification traps, non-competes, IP grabs, and liability caps. Be extremely comprehensive and detailed. Format headers using simple CAPS."""
         else:
-            system_prompt = """You are a legal assistant. Provide a basic, surface-level summary of this document and highlight any obvious general risks. Keep the analysis brief. Ensure any red flags include a page citation like [PAGE X]. Format headers using simple CAPS."""
+            system_prompt = """You are a legal assistant. Provide a basic, surface-level summary of this document and highlight any obvious general risks. Keep the analysis brief. Format headers using simple CAPS."""
 
-        # 2. FIXED PROMPT: Force the AI to read to the absolute end
+        # 2. FIXED PROMPT: Read the whole document, prioritize Top 10 risks, NO page numbers
         user_prompt = f"""You MUST start your response with a risk score on the very first line in this exact format: "RISK_SCORE: X" (where X is a number from 1 to 10, with 10 being highly predatory). Then provide the analysis.
         
-Analyze the following legal document. You MUST analyze the ENTIRE document from start to finish. Do not stop scanning until you have reached the absolute final page. You MUST cite the exact page number for every point using the [PAGE X] markers. 
-You are strictly forbidden from summarizing only the first half of the document. You must extract every single highly predatory clause you can find, no matter how deep it is buried.
+Analyze the following legal document. You MUST analyze the ENTIRE document from start to finish. Do not stop scanning until you have reached the absolute final section. 
+
+To ensure the report remains readable and impactful, extract ONLY the Top 10 most severe, predatory, or high-risk clauses you find across the entire document. Do not summarize the first half; scan everything and surface the absolute worst terms.
 
 Format your response exactly using Markdown with these headings:
 
@@ -103,18 +104,18 @@ Format your response exactly using Markdown with these headings:
 (A comprehensive overview of the document, its purpose, and the parties involved).
 
 ### Core Terms & Fulfillments
-* **[Term]** (Page X): What are the main conditions, rules, or criteria outlined?
+* **[Term]**: What are the main conditions, rules, or criteria outlined?
 
 ### Benefits & Rights
-* **[Benefit/Right]** (Page X): What rights, compensation, or protections are granted?
+* **[Benefit/Right]**: What rights, compensation, or protections are granted?
 
 ### Responsibilities & Restrictions
-* **[Duty]** (Page X): What specific rules, obligations, or restrictions are imposed?
+* **[Duty]**: What specific rules, obligations, or restrictions are imposed?
 
 ### Red Flags & Risks
-> **[Risk 1]** (Page X): What clauses are predatory, dangerous, highly unusual, or severely limit liability?
+> **[Risk 1]**: What clauses are predatory, dangerous, highly unusual, or severely limit liability?
 
-> **[Risk 2]** (Page Y): Another risk description...
+> **[Risk 2]**: Another risk description...
 
 (CRITICAL INSTRUCTION: You MUST leave a completely blank empty line between each risk. Every individual risk must start with its own '>' character. Do NOT combine them into a single block).
 
