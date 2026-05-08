@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   UploadCloud, AlertTriangle, FileText, Loader2, Shield, CheckCircle, 
   History, Plus, Download, Trash2, Zap, User, Settings // <-- Added User & Settings
@@ -7,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import { jsPDF } from "jspdf";
 
 export default function Dashboard() {
+  const location = useLocation();
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState("");
@@ -190,11 +192,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchHistory();
-    fetchProfile(); // <-- ADD THIS LINE
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('triggerCheckout') === 'true') handleUpgrade();
+    fetchProfile(); 
   }, []);
 
+  // 2. URL Change Listener (Runs whenever the URL updates)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('triggerCheckout') === 'true') {
+      handleUpgrade();
+    }
+  }, [location.search]);
+  
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!file) return;
