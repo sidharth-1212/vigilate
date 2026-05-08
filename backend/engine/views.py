@@ -155,10 +155,9 @@ DOCUMENT TEXT:
         cost_output = (completion_tokens / 1_000_000) * OUTPUT_TOKEN_PRICE_PER_M
         total_cost = cost_input + cost_output
         
+        profile.api_spend += total_cost
         # 5. Update the user's spending profile
-        if profile.is_pro:
-            profile.api_spend += total_cost
-        else:
+        if not profile.is_pro:
             profile.daily_scans += 1
 
         profile.save()
