@@ -44,26 +44,3 @@ Enterprise data is a weapons-grade asset. Vigilate operates on strict data minim
 3. **Exact-Match Billing:** API spend is calculated dynamically via `DecimalField` token counting to prevent microscopic rounding drift over thousands of inferences.
 
 ---
-
-## ⚙️ Local Deployment (Development)
-
-To spin up the Vigilate infrastructure locally for development and testing:
-
-### 1. Backend Initialization (Django)
-```bash
-# Navigate to the backend directory
-cd backend
-
-# Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate  # Or `venv\Scripts\activate` on Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run structural database migrations
-python manage.py makemigrations
-python manage.py migrate
-
-# Ignite the local server
-python manage.py runserver
