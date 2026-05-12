@@ -1,10 +1,17 @@
-import { ArrowRight, Check, Shield, Zap, FileText, CheckCircle, X } from 'lucide-react';
+import { ArrowRight, Check, Shield, Zap, FileText, CheckCircle, X, ScanSearch, BookOpen, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const [showSample, setShowSample] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleAuthRoute = () => {
     const hasToken = !!localStorage.getItem('token');
@@ -18,263 +25,309 @@ export default function LandingPage() {
   const handleUpgradeRoute = () => {
     const hasToken = !!localStorage.getItem('token');
     if (hasToken) {
-      // If logged in, send them straight to the dashboard and pop open Dodo
       navigate('/dashboard?triggerCheckout=true');
     } else {
-      // If logged out, send them to login with the intent parameter
       navigate('/login?intent=purchase');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-[#080c14] text-white selection:bg-blue-500/30" style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+      
+      {/* Subtle grid background */}
+      <div className="fixed inset-0 pointer-events-none" style={{
+        backgroundImage: `linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px)`,
+        backgroundSize: '80px 80px'
+      }} />
 
+      {/* Glow blobs */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.07) 0%, transparent 70%)' }} />
+      
       {/* Hero Section */}
-      <header className="container mx-auto px-6 pt-24 pb-32 text-center max-w-4xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/30 text-blue-400 text-sm font-medium mb-8 border border-blue-800/50">
-          <span className="relative flex h-2 w-2">
+      <header className="relative container mx-auto px-6 pt-28 pb-36 text-center max-w-5xl">
+        
+        {/* Badge */}
+        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/5 text-blue-400 text-xs tracking-widest uppercase font-sans mb-10">
+          <span className="relative flex h-1.5 w-1.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
           </span>
-          SambaNova Llama 3.3 Powered
+          Llama 3.3 · 70B · Legal Intelligence
         </div>
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight">
-          Stop signing <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-400 to-cyan-300">blind.</span>
+
+        <h1 style={{ fontFamily: "'Georgia', serif", letterSpacing: '-0.03em', lineHeight: '1.05' }} className="text-6xl md:text-8xl font-bold mb-7 text-white">
+          Stop signing<br />
+          <span style={{ WebkitTextStroke: '1px rgba(59,130,246,0.8)', color: 'transparent' }}>blind.</span>
         </h1>
-        <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Upload any contract, NDA, or terms of service. Our AI acts as your personal legal team, instantly extracting hidden red flags and plain-English summaries so you can sign with confidence.
+
+        <p className="text-lg text-slate-400 mb-12 max-w-xl mx-auto leading-relaxed font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>
+          Upload any contract, NDA, or terms of service. Vigilate extracts hidden red flags and translates legal language into plain English — in seconds.
         </p>
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <button onClick={handleAuthRoute} className="bg-white text-gray-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition flex items-center justify-center gap-2">
-            Scan a Document <ArrowRight className="w-5 h-5" />
-          </button>
-          <button 
-            onClick={() => setShowSample(true)} // <-- Add this onClick handler
-            className="px-8 py-4 rounded-xl font-bold text-lg border border-gray-700 hover:bg-gray-800 transition"
+
+        <div className="flex flex-col sm:flex-row justify-center gap-3">
+          <button
+            onClick={handleAuthRoute}
+            className="group inline-flex items-center justify-center gap-2.5 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-semibold text-base transition-all duration-200 shadow-lg shadow-blue-900/30 font-sans"
+            style={{ fontFamily: "'system-ui', sans-serif" }}
           >
+            Scan a Document
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+          <button
+            onClick={() => setShowSample(true)}
+            className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl font-semibold text-base border border-slate-700/80 hover:border-slate-600 hover:bg-slate-800/50 text-slate-300 transition-all duration-200 font-sans"
+            style={{ fontFamily: "'system-ui', sans-serif" }}
+          >
+            <BookOpen className="w-4 h-4" />
             View Sample Report
           </button>
         </div>
+
+        {/* Social proof strip */}
+        <div className="mt-16 flex items-center justify-center gap-8 text-xs text-slate-600 font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>
+          <span className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-green-600" /> No credit card required</span>
+          <span className="w-px h-3 bg-slate-700" />
+          <span className="flex items-center gap-1.5"><Lock className="w-3.5 h-3.5 text-blue-600" /> Documents never stored</span>
+          <span className="w-px h-3 bg-slate-700" />
+          <span className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-yellow-600" /> Results in under 30s</span>
+        </div>
       </header>
 
-      {/* Value Prop Section */}
-      <section className="border-y border-gray-800 bg-gray-900/50 py-24">
-        <div className="container mx-auto px-6 grid md:grid-cols-3 gap-12">
-          <div className="space-y-4">
-            <div className="bg-blue-900/20 w-12 h-12 rounded-lg flex items-center justify-center border border-blue-800/50">
-              <Zap className="text-blue-400" />
-            </div>
-            <h3 className="text-xl font-bold">High-Speed Inference</h3>
-            <p className="text-gray-400">Powered by Llama 3.3 70B for sub-second text processing on documents up to 50,000 characters.</p>
-          </div>
-          <div className="space-y-4">
-            <div className="bg-red-900/20 w-12 h-12 rounded-lg flex items-center justify-center border border-red-800/50">
-              <Shield className="text-red-400" />
-            </div>
-            <h3 className="text-xl font-bold">Deep Clause Extraction</h3>
-            <p className="text-gray-400">Our engine identifies non-competes, indemnity traps, and IP grabs that generic AI models overlook.</p>
-          </div>
-          <div className="space-y-4">
-            <div className="bg-green-900/20 w-12 h-12 rounded-lg flex items-center justify-center border border-green-800/50">
-              <FileText className="text-green-400" />
-            </div>
-            <h3 className="text-xl font-bold">Premium Quota</h3>
-            <p className="text-gray-400">Pro members receive a massive token allowance, enough to analyze thousands of pages per month.</p>
+      {/* Feature Pillars */}
+      <section className="border-y border-slate-800/60 bg-slate-900/30 py-24">
+        <div className="container mx-auto px-6 max-w-5xl">
+          <div className="grid md:grid-cols-3 gap-px bg-slate-800/40 rounded-2xl overflow-hidden border border-slate-800/40">
+            {[
+              {
+                icon: <Zap className="w-5 h-5 text-blue-400" />,
+                color: 'bg-blue-500/8 border-blue-800/30',
+                iconBg: 'bg-blue-500/10 border border-blue-500/20',
+                title: 'High-Speed Inference',
+                desc: 'Powered by Llama 3.3 70B. Sub-second processing on documents up to 50,000 characters.'
+              },
+              {
+                icon: <ScanSearch className="w-5 h-5 text-rose-400" />,
+                color: 'bg-rose-500/5 border-rose-800/30',
+                iconBg: 'bg-rose-500/10 border border-rose-500/20',
+                title: 'Deep Clause Extraction',
+                desc: 'Identifies non-competes, indemnity traps, and IP grabs that generic AI models overlook.'
+              },
+              {
+                icon: <FileText className="w-5 h-5 text-emerald-400" />,
+                color: 'bg-emerald-500/5 border-emerald-800/30',
+                iconBg: 'bg-emerald-500/10 border border-emerald-500/20',
+                title: 'Professional Exports',
+                desc: 'Pro members get formatted PDF and TXT reports ready to share with counsel.'
+              }
+            ].map((f, i) => (
+              <div key={i} className="bg-[#0c1220] p-10 space-y-5 hover:bg-[#0e1525] transition-colors duration-300">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${f.iconBg}`}>{f.icon}</div>
+                <h3 className="text-base font-semibold text-white tracking-tight" style={{ fontFamily: "'system-ui', sans-serif" }}>{f.title}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing / CTA Section */}
-      <section className="py-24 px-6 bg-gray-900/20">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-black tracking-tighter sm:text-5xl mb-4">DEPLOY VIGILATE</h2>
-          <p className="text-gray-500 max-w-2xl mx-auto">
-            Start auditing contracts for free, or unlock enterprise-grade surveillance capacity for your entire operation.
-          </p>
-        </div>
+      {/* Pricing Section */}
+      <section className="py-28 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-16">
+            <p className="text-xs text-blue-500 tracking-[0.2em] uppercase font-sans mb-3" style={{ fontFamily: "'system-ui', sans-serif" }}>Pricing</p>
+            <h2 className="text-4xl font-bold tracking-tight text-white mb-4" style={{ fontFamily: "'Georgia', serif", letterSpacing: '-0.02em' }}>
+              Deploy Vigilate
+            </h2>
+            <p className="text-slate-500 max-w-md mx-auto text-sm font-sans leading-relaxed" style={{ fontFamily: "'system-ui', sans-serif" }}>
+              Start auditing for free, or unlock enterprise-grade capacity for high-volume operations.
+            </p>
+          </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            
-            {/* --- FREE TIER CARD --- */}
-            <div className="bg-gray-900 border border-gray-800 rounded-3xl p-8 flex flex-col transition hover:border-gray-700">
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-gray-300 mb-2">Reconnaissance</h3>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black text-white">$0</span>
-                  <span className="text-gray-500 text-sm">/ forever</span>
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {/* Free Tier */}
+            <div className="bg-[#0c1220] border border-slate-800 rounded-2xl p-8 flex flex-col hover:border-slate-700 transition-colors duration-300">
+              <div className="mb-8">
+                <p className="text-xs text-slate-500 tracking-widest uppercase font-sans mb-2" style={{ fontFamily: "'system-ui', sans-serif" }}>Reconnaissance</p>
+                <div className="flex items-baseline gap-2 mb-3">
+                  <span className="text-5xl font-bold text-white" style={{ fontFamily: "'Georgia', serif" }}>$0</span>
+                  <span className="text-slate-600 text-sm font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>/ forever</span>
                 </div>
-                <p className="text-gray-500 text-sm mt-4">Essential legal intelligence for individuals and quick checks.</p>
+                <p className="text-slate-500 text-sm leading-relaxed font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>Essential legal intelligence for individuals and quick checks.</p>
               </div>
 
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3 text-sm text-gray-300">
-                  <Check className="w-5 h-5 text-gray-600" /> 5 AI Scans per month
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-300">
-                  <Check className="w-5 h-5 text-gray-600" /> PDF & DOCX File Upload Support
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-300">
-                  <Check className="w-5 h-5 text-gray-600" /> Basic Risk Scoring (1-10)
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-300">
-                  <Check className="w-5 h-5 text-gray-600" /> 24-Hour Audit History
-                </li>
+              <ul className="space-y-3.5 mb-8 flex-1">
+                {['5 AI scans per month', 'PDF & DOCX support', 'Risk scoring (1–10)', '24-hour audit history'].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-sm text-slate-400 font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>
+                    <span className="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center flex-shrink-0">
+                      <Check className="w-2.5 h-2.5 text-slate-500" />
+                    </span>
+                    {item}
+                  </li>
+                ))}
               </ul>
 
-              <button 
-                onClick={handleAuthRoute} 
-                className="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 rounded-xl transition"
+              <button
+                onClick={handleAuthRoute}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-3.5 rounded-xl transition text-sm font-sans"
+                style={{ fontFamily: "'system-ui', sans-serif" }}
               >
                 Start Scanning
               </button>
             </div>
 
-            {/* --- PRO TIER CARD --- */}
-            <div className="bg-gray-800 border border-blue-500/50 rounded-3xl p-8 flex flex-col shadow-2xl shadow-blue-900/20 relative overflow-hidden transform md:-translate-y-4">
-              {/* Glowing Accent Top - TYPO FIXED HERE */}
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-cyan-300"></div>
+            {/* Pro Tier */}
+            <div className="bg-[#0c1220] border border-blue-500/40 rounded-2xl p-8 flex flex-col relative overflow-hidden shadow-2xl shadow-blue-950/30 md:-translate-y-3">
+              <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
               
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-xl font-bold text-blue-400">Command Center</h3>
-                  <span className="bg-blue-900/30 text-blue-300 text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-blue-500/30 flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> Recommended
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-blue-400 tracking-widest uppercase font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>Command Center</p>
+                  <span className="text-[10px] bg-blue-500/15 border border-blue-500/30 text-blue-400 px-2.5 py-1 rounded-full tracking-widest uppercase font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>
+                    ★ Most Popular
                   </span>
                 </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-black text-white">$19</span>
-                  <span className="text-gray-500 text-sm">/ month</span>
+                <div className="flex items-baseline gap-2 mb-3">
+                  <span className="text-5xl font-bold text-white" style={{ fontFamily: "'Georgia', serif" }}>$19</span>
+                  <span className="text-slate-500 text-sm font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>/ month</span>
                 </div>
-                <p className="text-gray-400 text-sm mt-4">Massive surveillance capacity for professionals and high-volume operations.</p>
+                <p className="text-slate-400 text-sm leading-relaxed font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>Massive surveillance capacity for professionals and high-volume operations.</p>
               </div>
 
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-center gap-3 text-sm text-white">
-                  <Shield className="w-5 h-5 text-blue-400" /> Bypass daily scan limits
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-300">
-                  <Check className="w-5 h-5 text-blue-500" /> Deep Clause Extraction
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-300">
-                  <Check className="w-5 h-5 text-blue-500" /> Unlimited Persistent Audit History
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-300">
-                  <Check className="w-5 h-5 text-blue-500" /> Professional PDF & TXT Exports
-                </li>
-                <li className="flex items-center gap-3 text-sm text-gray-300">
-                  <Check className="w-5 h-5 text-blue-500" /> Priority Llama-3.3 Inference
-                </li>
+              <ul className="space-y-3.5 mb-8 flex-1">
+                {[
+                  { text: 'Bypass daily scan limits', highlight: true },
+                  { text: 'Deep clause extraction', highlight: false },
+                  { text: 'Unlimited persistent history', highlight: false },
+                  { text: 'PDF & TXT professional exports', highlight: false },
+                  { text: 'Priority Llama-3.3 inference', highlight: false },
+                ].map((item) => (
+                  <li key={item.text} className={`flex items-center gap-3 text-sm font-sans ${item.highlight ? 'text-white' : 'text-slate-300'}`} style={{ fontFamily: "'system-ui', sans-serif" }}>
+                    <span className="w-4 h-4 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center flex-shrink-0">
+                      <Check className="w-2.5 h-2.5 text-blue-400" />
+                    </span>
+                    {item.text}
+                  </li>
+                ))}
               </ul>
 
-              <button 
+              <button
                 onClick={handleUpgradeRoute}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/50 transition transform hover:scale-[1.02]"
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-blue-900/30 transition text-sm font-sans"
+                style={{ fontFamily: "'system-ui', sans-serif" }}
               >
                 Upgrade to Pro
               </button>
             </div>
-
+          </div>
         </div>
       </section>
 
-      {/* --- LEGAL FOOTER --- */}
-          <footer className="mt-16 pt-8 border-t border-gray-800 text-center text-xs text-gray-600 pb-4">
-            <p className="mb-2">
-              Contact Support: architechsystems.lk@gmail.com
-            </p>
-            <p className="mb-2">© 2026 Vigilate Intelligence. All rights reserved.</p>
-            <div className="flex justify-center gap-4">
-              <a href="/privacy" className="hover:text-blue-400 transition">Privacy Policy</a>
-              <a href="/terms" className="hover:text-blue-400 transition">Terms of Service</a>
+      {/* Footer */}
+      <footer className="border-t border-slate-800/60 py-10 px-6">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Shield className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-semibold tracking-tight font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>Vigilate</span>
             </div>
-            <p className="mt-4 max-w-xl mx-auto opacity-50">
-              Disclaimer: Vigilate provides AI-assisted text analysis and clause extraction. 
-              It does not constitute legal advice. No attorney-client relationship is formed. 
-              Always consult with qualified legal counsel before signing binding agreements.
-            </p>
-          </footer>
-      
-      {/* --- SAMPLE REPORT MODAL --- */}
+            <div className="flex items-center gap-6 text-xs text-slate-600 font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>
+              <a href="mailto:architechsystems.lk@gmail.com" className="hover:text-slate-400 transition">architechsystems.lk@gmail.com</a>
+              <a href="/privacy" className="hover:text-slate-400 transition">Privacy Policy</a>
+              <a href="/terms" className="hover:text-slate-400 transition">Terms of Service</a>
+            </div>
+          </div>
+          <p className="text-center text-xs text-slate-700 max-w-2xl mx-auto leading-relaxed font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>
+            Vigilate provides AI-assisted text analysis and clause extraction for informational purposes only. It does not constitute legal advice and no attorney-client relationship is formed. Always consult a qualified attorney before signing binding agreements. © 2026 Vigilate Intelligence.
+          </p>
+        </div>
+      </footer>
+
+      {/* Sample Report Modal */}
       {showSample && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-gray-900 border border-gray-700 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-            
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && setShowSample(false)}>
+          <div className="bg-[#0c1220] border border-slate-700/60 rounded-2xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden shadow-2xl">
+
             {/* Modal Header */}
-            <div className="flex justify-between items-center p-6 border-b border-gray-800 bg-gray-900/80 backdrop-blur-xl sticky top-0 z-10">
+            <div className="flex justify-between items-center p-6 border-b border-slate-800 bg-[#0c1220]/90 sticky top-0 z-10">
               <div>
-                <h2 className="text-xl font-bold flex items-center gap-3">
-                  <FileText className="text-blue-500" /> Executive Analysis
-                </h2>
-                <p className="text-xs text-gray-500 mt-1 font-mono">FILE: Senior_Dev_Employment_Agreement_v2.pdf</p>
+                <div className="flex items-center gap-2.5 mb-0.5">
+                  <FileText className="w-4 h-4 text-blue-500" />
+                  <h2 className="text-base font-semibold text-white font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>Sample Analysis Report</h2>
+                </div>
+                <p className="text-xs text-slate-600 font-mono mt-0.5">Senior_Dev_Employment_Agreement_v2.pdf</p>
               </div>
-              <button 
+              <button
                 onClick={() => setShowSample(false)}
-                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-full text-gray-400 hover:text-white transition"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-8 overflow-y-auto text-left custom-scrollbar bg-gradient-to-b from-gray-900 to-black">
-              
-              {/* Fake Scorecard */}
-              <div className="bg-gray-800/50 border border-red-900/50 rounded-2xl p-6 mb-8 flex items-center justify-between shadow-inner">
+            <div className="p-8 overflow-y-auto">
+
+              {/* Risk Scorecard */}
+              <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-5 mb-8 flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs uppercase tracking-widest text-gray-400 font-bold mb-1">System Risk Assessment</h3>
-                  <p className="text-red-400/80 text-xs font-mono">Critical vulnerabilities detected in clauses 4 and 9.</p>
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-500 font-sans mb-1" style={{ fontFamily: "'system-ui', sans-serif" }}>Risk Assessment</p>
+                  <p className="text-red-400/70 text-xs font-mono">Critical vulnerabilities detected in clauses 4 and 9.</p>
                 </div>
-                <div className="text-6xl font-black text-red-500 tabular-nums">
-                  8<span className="text-2xl text-red-900/50">/10</span>
+                <div className="text-right">
+                  <div className="text-5xl font-bold text-red-500 tabular-nums" style={{ fontFamily: "'Georgia', serif" }}>8</div>
+                  <div className="text-xs text-slate-700 font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>/10 risk</div>
                 </div>
               </div>
 
-              {/* Fake Report Content (Using standard HTML to avoid Markdown dependency on landing page) */}
-              <div className="space-y-8 text-gray-300 leading-relaxed">
-                
+              <div className="space-y-8 text-slate-300 font-sans" style={{ fontFamily: "'system-ui', sans-serif" }}>
+
                 <section>
-                  <h3 className="text-2xl font-bold text-white mb-3 border-b border-gray-800 pb-2">Executive Summary</h3>
-                  <p>This document is a standard-form Employment Agreement for a Senior Software Engineering role. While the compensation and equity vesting schedules are standard, the post-employment restrictive covenants are highly aggressive and heavily favor the employer.</p>
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-widest mb-3 pb-2 border-b border-slate-800">Executive Summary</h3>
+                  <p className="text-sm leading-relaxed text-slate-400">This document is a standard-form Employment Agreement for a Senior Software Engineering role. While compensation and equity vesting schedules are market-standard, the post-employment restrictive covenants are highly aggressive and heavily favor the employer.</p>
                 </section>
 
                 <section>
-                  <h3 className="text-2xl font-bold text-white mb-3 border-b border-gray-800 pb-2">Red Flags & Risks</h3>
-                  <ul className="space-y-4">
-                    <li className="bg-red-900/10 border-l-4 border-red-500 p-4 rounded-r-lg">
-                      <strong className="text-red-400 block mb-1">Asymmetric IP Assignment (Page 4, Clause 4.2):</strong>
-                      The definition of "Company Intellectual Property" includes projects developed on your *personal time* using your *personal equipment*, unless you can definitively prove the concept was conceived prior to your start date. This is a severe overreach.
-                    </li>
-                    <li className="bg-red-900/10 border-l-4 border-red-500 p-4 rounded-r-lg">
-                      <strong className="text-red-400 block mb-1">Predatory Non-Compete (Page 7, Clause 9.1):</strong>
-                      The agreement prohibits you from working for any "competitor" globally for 24 months after termination. The term "competitor" is vaguely defined as any company utilizing cloud-based infrastructure, effectively barring you from the entire tech sector.
-                    </li>
-                    <li className="bg-red-900/10 border-l-4 border-red-500 p-4 rounded-r-lg">
-                      <strong className="text-red-400 block mb-1">Uncapped Indemnification (Page 11, Clause 14):</strong>
-                      You agree to personally indemnify the employer against "any and all claims" arising from your code. This bypasses standard corporate liability shields and makes you personally liable for systemic software failures.
-                    </li>
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-widest mb-3 pb-2 border-b border-slate-800">Red Flags & Risks</h3>
+                  <ul className="space-y-3">
+                    {[
+                      { title: 'Asymmetric IP Assignment (Page 4, Clause 4.2)', desc: 'The definition of "Company Intellectual Property" includes projects developed on your personal time using personal equipment, unless you can definitively prove the concept predated your start date.' },
+                      { title: 'Predatory Non-Compete (Page 7, Clause 9.1)', desc: 'Prohibits you from working for any "competitor" globally for 24 months. The term "competitor" is vaguely defined as any company utilizing cloud infrastructure — effectively barring you from the tech sector.' },
+                      { title: 'Uncapped Indemnification (Page 11, Clause 14)', desc: 'You agree to personally indemnify the employer against "any and all claims" arising from your code, bypassing corporate liability shields.' }
+                    ].map((flag) => (
+                      <li key={flag.title} className="bg-red-500/5 border-l-2 border-red-500/60 pl-4 pr-4 py-3.5 rounded-r-xl">
+                        <strong className="text-red-400 text-xs block mb-1.5 font-semibold">{flag.title}</strong>
+                        <p className="text-slate-400 text-xs leading-relaxed">{flag.desc}</p>
+                      </li>
+                    ))}
                   </ul>
                 </section>
 
                 <section>
-                  <h3 className="text-2xl font-bold text-white mb-3 border-b border-gray-800 pb-2">Benefits & Rights</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-gray-400">
-                    <li><strong className="text-gray-200">Equity Vesting (Page 2):</strong> Standard 4-year vesting schedule with a 1-year cliff.</li>
-                    <li><strong className="text-gray-200">Severance (Page 8):</strong> 3 months base salary upon termination without cause, which is slightly above industry average.</li>
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-widest mb-3 pb-2 border-b border-slate-800">Benefits & Rights</h3>
+                  <ul className="space-y-2.5">
+                    {[
+                      { title: 'Equity Vesting (Page 2)', desc: 'Standard 4-year vesting with a 1-year cliff.' },
+                      { title: 'Severance (Page 8)', desc: '3 months base salary upon termination without cause — slightly above industry average.' }
+                    ].map((b) => (
+                      <li key={b.title} className="flex items-start gap-3 text-xs text-slate-400">
+                        <span className="w-4 h-4 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Check className="w-2.5 h-2.5 text-emerald-400" />
+                        </span>
+                        <div><strong className="text-slate-300">{b.title}:</strong> {b.desc}</div>
+                      </li>
+                    ))}
                   </ul>
                 </section>
-
               </div>
-              
-              {/* CTA Inside Modal */}
-              <div className="mt-12 pt-6 border-t border-gray-800 text-center">
-                <button 
+
+              <div className="mt-10 pt-6 border-t border-slate-800 text-center">
+                <button
                   onClick={handleAuthRoute}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-xl transition shadow-lg shadow-blue-900/20"
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-7 rounded-xl transition shadow-lg shadow-blue-900/20 text-sm"
                 >
-                  Start Scanning Your Documents
+                  Analyze Your Document <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
-
             </div>
           </div>
         </div>

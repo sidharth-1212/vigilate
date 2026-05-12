@@ -179,7 +179,7 @@ DOCUMENT TEXT:
             "scan_id": scan_record.id,
             "cost_incurred": round(total_cost, 4),
             "risk_score": risk_score,
-            "remaining_balance": round(MAX_ALLOWANCE - profile.api_spend, 2)
+            "remaining_balance": round(MAX_ALLOWANCE - float(profile.api_spend), 2)
         })
 
     except Exception as e:
